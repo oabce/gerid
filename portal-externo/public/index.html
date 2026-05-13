@@ -852,6 +852,7 @@
             const resultado = document.getElementById('resultadoConsultaCentral');
 
             formConsulta.classList.add('hidden');
+            resultado.className = "mt-10";
 
             // Gerar HTML da Timeline
             const timelineHTML = item.historico.map((h, index) => {
