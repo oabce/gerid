@@ -190,6 +190,7 @@ app.get('/api/public/categorias', async (req, res) => {
         const { rows } = await pool.query('SELECT * FROM categorias WHERE ativo = true ORDER BY nome ASC');
         res.json(rows || []);
     } catch (error) {
+        console.error('[Categorias] Erro:', error.message);
         res.status(500).json({ error: 'Erro ao carregar categorias' });
     }
 });
