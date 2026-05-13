@@ -137,15 +137,18 @@ app.post('/api/chamados', async (req, res) => {
                 <hr><p>Protocolo: ${protocolo}</p>
             </div>`;
 
-        await transporter.sendMail({
+        res.status(201).json({ message: 'Solicitação enviada com sucesso!', protocolo, ...(uploadErros.length ? { aviso_uploads: uploadErros } : {}) });
+
+        // Emails disparados após responder ao cliente (não bloqueiam nem causam 500)
+        transporter.sendMail({
             from: process.env.SMTP_FROM,
             to: process.env.SMTP_TO,
             subject: `NOVO CHAMADO - PROTOCOLO #${protocolo} - ${assunto}`,
             html: htmlSuporte,
             attachments: arquivos.map(f => ({ filename: f.name, content: Buffer.from(f.data, 'base64') }))
-        });
+        }).catch(err => console.error('[E-mail] Suporte:', err.message));
 
-        await transporter.sendMail({
+        transporter.sendMail({
             from: process.env.SMTP_FROM,
             to: email,
             subject: `Confirmação de Abertura de Chamado - Protocolo #${protocolo}`,
@@ -163,8 +166,6 @@ app.post('/api/chamados', async (req, res) => {
                     <p style="color:#d32f2f;font-weight:bold;text-align:center;font-size:14px">⚠️ Por favor, não responder esse e-mail.</p>
                 </div>`
         }).catch(err => console.error('[E-mail] Confirmação usuário:', err.message));
-
-        res.status(201).json({ message: 'Solicitação enviada com sucesso!', protocolo, ...(uploadErros.length ? { aviso_uploads: uploadErros } : {}) });
 
     } catch (error) {
         console.error('Erro ao criar chamado:', error.message);
@@ -283,7 +284,9 @@ app.patch('/api/public/chamados/:id/resolver', async (req, res) => {
         }).eq('id', id);
         if (updateError) throw new Error(updateError.message);
 
-        await transporter.sendMail({
+        res.json({ success: true, message: 'Pendência enviada com sucesso!', ...(uploadErrosR.length ? { aviso_uploads: uploadErrosR } : {}) });
+
+        transporter.sendMail({
             from: process.env.SMTP_FROM,
             to: process.env.SMTP_TO,
             subject: `PENDÊNCIA RESOLVIDA - ${assunto}`,
@@ -293,9 +296,9 @@ app.patch('/api/public/chamados/:id/resolver', async (req, res) => {
                 <p><strong>Observação:</strong> ${nova_observacao || 'Nenhuma.'}</p>
                 <p>Verifique o painel do agente.</p></div>`,
             attachments: arquivos.map(f => ({ filename: f.name, content: Buffer.from(f.data, 'base64') }))
-        });
+        }).catch(err => console.error('[E-mail] Suporte resolver:', err.message));
 
-        await transporter.sendMail({
+        transporter.sendMail({
             from: process.env.SMTP_FROM,
             to: email,
             subject: `Pendência Recebida - Protocolo #${protocolo}`,
@@ -308,8 +311,6 @@ app.patch('/api/public/chamados/:id/resolver', async (req, res) => {
                 <p style="color:#d32f2f;font-weight:bold;text-align:center;font-size:14px">⚠️ Por favor, não responder esse e-mail.</p>
             </div>`
         }).catch(err => console.error('[E-mail] Confirmação resolver:', err.message));
-
-        res.json({ success: true, message: 'Pendência enviada com sucesso!', ...(uploadErrosR.length ? { aviso_uploads: uploadErrosR } : {}) });
 
     } catch (error) {
         console.error('Erro ao resolver pendência:', error.message);
