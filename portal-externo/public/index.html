@@ -110,6 +110,15 @@
         html.light-mode .hover\:bg-white\/5:hover { background-color: rgba(0,0,0,0.04) !important; }
         html.light-mode .hover\:bg-\[\#252525\]:hover { background-color: #e2e8f0 !important; }
 
+        /* Variantes text-white com opacidade */
+        html.light-mode .text-white\/80 { color: rgba(0,0,0,0.80) !important; }
+        html.light-mode .text-white\/60 { color: rgba(0,0,0,0.65) !important; }
+        html.light-mode .text-white\/50 { color: rgba(0,0,0,0.55) !important; }
+        html.light-mode .text-white\/40 { color: rgba(0,0,0,0.50) !important; }
+        html.light-mode .text-white\/30 { color: rgba(0,0,0,0.45) !important; }
+        html.light-mode .text-white\/20 { color: rgba(0,0,0,0.40) !important; }
+        html.light-mode .hover\:text-white:hover { color: #0f172a !important; }
+
         html.light-mode .bg-\[\#1e1e1e\].inline-flex { background-color: #e2e8f0 !important; }
 
         /* Botão de envio: mantém branco no modo claro */
@@ -117,11 +126,27 @@
         html.light-mode .hover\:bg-slate-200:hover { background-color: #1e293b !important; }
 
         /* Navbar mobile */
-        #mobileNav { background-color: #1e1e1e; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        html.light-mode #mobileNav { background-color: #ffffff !important; border-bottom: 1px solid rgba(0,0,0,0.08) !important; }
+        #mobileNav { background-color: #131313; border-bottom: none; }
+        html.light-mode #mobileNav { background-color: #f1f5f9 !important; border-bottom: none !important; }
         html.light-mode #mobileNav .text-white { color: #0f172a !important; }
         html.light-mode #mobileNav .text-slate-400 { color: #64748b !important; }
-        html.light-mode #mobileNav .bg-\[\#131313\] { background-color: #f1f5f9 !important; }
+        html.light-mode #mobileNav .bg-\[\#131313\] { background-color: #e2e8f0 !important; }
+
+        /* Timeline em modo claro — cores dos status e linhas */
+        html.light-mode .text-slate-500.italic { color: #475569 !important; opacity: 1 !important; }
+        html.light-mode [class*="opacity-80"] { opacity: 1 !important; }
+        html.light-mode .text-blue-500   { color: #1d4ed8 !important; }
+        html.light-mode .text-purple-500 { color: #7e22ce !important; }
+        html.light-mode .text-amber-500  { color: #b45309 !important; }
+        html.light-mode .text-emerald-500{ color: #065f46 !important; }
+        html.light-mode .text-red-500    { color: #b91c1c !important; }
+        html.light-mode .text-sky-500    { color: #0369a1 !important; }
+        html.light-mode .bg-blue-500\/10   { background-color: rgba(29,78,216,0.12) !important; }
+        html.light-mode .bg-purple-500\/10 { background-color: rgba(126,34,206,0.12) !important; }
+        html.light-mode .bg-amber-500\/10  { background-color: rgba(180,83,9,0.12) !important; }
+        html.light-mode .bg-emerald-500\/10{ background-color: rgba(6,95,70,0.12) !important; }
+        html.light-mode .bg-red-500\/10    { background-color: rgba(185,28,28,0.12) !important; }
+        html.light-mode .bg-sky-500\/10    { background-color: rgba(3,105,161,0.12) !important; }
     </style>
 </head>
 
@@ -186,7 +211,7 @@
         </div>
 
         <div class="relative flex flex-col bg-[#131313] h-full overflow-y-auto custom-scrollbar">
-            <div class="w-full max-w-3xl mx-auto px-6 md:px-12 pt-20 lg:pt-12 pb-12">
+            <div class="w-full max-w-3xl mx-auto px-3 sm:px-6 md:px-12 pt-20 lg:pt-12 pb-12">
 
                 <div class="hidden lg:flex justify-end mb-4">
                     <button id="themeToggle" onclick="toggleTheme()"
@@ -201,14 +226,14 @@
                     </button>
                 </div>
 
-                <div class="flex justify-center mb-10">
-                    <div class="inline-flex bg-[#1e1e1e] p-1 rounded-2xl">
+                <div class="flex mb-10">
+                    <div class="inline-flex bg-[#1e1e1e] p-1 rounded-2xl w-full">
                         <button id="btnViewAbrir" onclick="alternarTela('abrir')"
-                            class="px-5 md:px-8 py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all bg-white text-black whitespace-nowrap">
+                            class="flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all bg-white text-black">
                             Abrir Chamado
                         </button>
                         <button id="btnViewConsultar" onclick="alternarTela('consultar')"
-                            class="px-5 md:px-8 py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white whitespace-nowrap">
+                            class="flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white">
                             Consultar Status
                         </button>
                     </div>
@@ -660,15 +685,15 @@
             const navbarTitle = document.getElementById('navbarTitle');
             if (tela === 'abrir') {
                 if (vAbrir) vAbrir.classList.remove('hidden');
-                if (bAbrir) bAbrir.className = "px-5 md:px-8 py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all bg-white text-black whitespace-nowrap";
-                if (bConsultar) bConsultar.className = "px-5 md:px-8 py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white whitespace-nowrap";
+                if (bAbrir) bAbrir.className = "flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all bg-white text-black";
+                if (bConsultar) bConsultar.className = "flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white";
                 if (mainTitle) mainTitle.textContent = "Novo Chamado";
                 if (mainSubtitle) mainSubtitle.textContent = "Preencha os campos abaixo";
                 if (navbarTitle) navbarTitle.textContent = "Novo Chamado";
             } else if (tela === 'consultar') {
                 if (vConsultar) vConsultar.classList.remove('hidden');
-                if (bConsultar) bConsultar.className = "px-5 md:px-8 py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all bg-white text-black whitespace-nowrap";
-                if (bAbrir) bAbrir.className = "px-5 md:px-8 py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white whitespace-nowrap";
+                if (bConsultar) bConsultar.className = "flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all bg-white text-black";
+                if (bAbrir) bAbrir.className = "flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white";
                 if (mainTitle) mainTitle.textContent = "Consultar Status";
                 if (mainSubtitle) mainSubtitle.textContent = "Acompanhe seu atendimento";
                 if (navbarTitle) navbarTitle.textContent = "Consultar Status";
@@ -686,8 +711,8 @@
                 }
             } else if (tela === 'resolver') {
                 if (vResolver) vResolver.classList.remove('hidden');
-                if (bAbrir) bAbrir.className = "px-5 md:px-8 py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white whitespace-nowrap";
-                if (bConsultar) bConsultar.className = "px-5 md:px-8 py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white whitespace-nowrap";
+                if (bAbrir) bAbrir.className = "flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white";
+                if (bConsultar) bConsultar.className = "flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white";
                 if (mainTitle) mainTitle.textContent = "Resolver Pendência";
                 if (mainSubtitle) mainSubtitle.textContent = "Atualize as informações solicitadas";
                 if (navbarTitle) navbarTitle.textContent = "Resolver Pendência";
