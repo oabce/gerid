@@ -48,9 +48,12 @@ async function uploadParaStorage(protocolo, buffer, nome, contentType) {
     const { error } = await supabaseAdmin.storage
         .from('chamados')
         .upload(nomeArq, buffer, { contentType });
-    if (error) { console.error('[Storage] Erro upload:', error.message); return null; }
+    if (error) {
+        console.error('[Storage] Erro upload:', error.message, '| arquivo:', nome, '| bucket: chamados');
+        return { erro: error.message };
+    }
     const { data } = supabaseAdmin.storage.from('chamados').getPublicUrl(nomeArq);
-    return data.publicUrl;
+    return { url: data.publicUrl };
 }
 
 const transporter = nodemailer.createTransport({
@@ -85,10 +88,12 @@ app.post('/api/chamados', async (req, res) => {
 
         // Upload dos arquivos para Supabase Storage
         const imageURLs = [];
+        const uploadErros = [];
         for (const arq of arquivos) {
             const buf = Buffer.from(arq.data, 'base64');
-            const url = await uploadParaStorage(protocolo, buf, arq.name, arq.type);
-            if (url) imageURLs.push(url);
+            const resultado = await uploadParaStorage(protocolo, buf, arq.name, arq.type);
+            if (resultado.url) imageURLs.push(resultado.url);
+            else if (resultado.erro) uploadErros.push(`${arq.name}: ${resultado.erro}`);
         }
 
         const historico = [{
@@ -159,7 +164,7 @@ app.post('/api/chamados', async (req, res) => {
                 </div>`
         }).catch(err => console.error('[E-mail] Confirmação usuário:', err.message));
 
-        res.status(201).json({ message: 'Solicitação enviada com sucesso!', protocolo });
+        res.status(201).json({ message: 'Solicitação enviada com sucesso!', protocolo, ...(uploadErros.length ? { aviso_uploads: uploadErros } : {}) });
 
     } catch (error) {
         console.error('Erro ao criar chamado:', error.message);
@@ -253,10 +258,12 @@ app.patch('/api/public/chamados/:id/resolver', async (req, res) => {
 
         // Upload dos novos arquivos
         const novasUrls = [];
+        const uploadErrosR = [];
         for (const arq of arquivos) {
             const buf = Buffer.from(arq.data, 'base64');
-            const url = await uploadParaStorage(protocolo, buf, arq.name, arq.type);
-            if (url) novasUrls.push(url);
+            const resultado = await uploadParaStorage(protocolo, buf, arq.name, arq.type);
+            if (resultado.url) novasUrls.push(resultado.url);
+            else if (resultado.erro) uploadErrosR.push(`${arq.name}: ${resultado.erro}`);
         }
 
         const novoHistorico = [...historicoAtual, {
@@ -302,7 +309,7 @@ app.patch('/api/public/chamados/:id/resolver', async (req, res) => {
             </div>`
         }).catch(err => console.error('[E-mail] Confirmação resolver:', err.message));
 
-        res.json({ success: true, message: 'Pendência enviada com sucesso!' });
+        res.json({ success: true, message: 'Pendência enviada com sucesso!', ...(uploadErrosR.length ? { aviso_uploads: uploadErrosR } : {}) });
 
     } catch (error) {
         console.error('Erro ao resolver pendência:', error.message);
