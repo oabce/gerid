@@ -2,7 +2,6 @@ const express = require('express');
 require('dotenv').config();
 const nodemailer = require('nodemailer');
 const cors = require('cors');
-const multer = require('multer');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -40,29 +39,15 @@ function validarCPF(cpf) {
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '8mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Multer em memória — sem escrita em disco (compatível com Netlify Functions)
-const TIPOS_PERMITIDOS = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
-const EXTENSOES_PERMITIDAS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
-
-function fileFilter(req, file, cb) {
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (TIPOS_PERMITIDOS.includes(file.mimetype) && EXTENSOES_PERMITIDAS.includes(ext)) {
-        cb(null, true);
-    } else {
-        cb(new Error('Tipo de arquivo não permitido. Envie apenas imagens ou PDF.'), false);
-    }
-}
-
-const upload = multer({ storage: multer.memoryStorage(), fileFilter, limits: { fileSize: 20 * 1024 * 1024 } });
-
-async function uploadParaStorage(protocolo, arquivo) {
-    const nomeArq = `${protocolo}/${Date.now()}-${arquivo.originalname}`;
+async function uploadParaStorage(protocolo, buffer, nome, contentType) {
+    const ext = path.extname(nome).toLowerCase() || '.bin';
+    const nomeArq = `${protocolo}/${Date.now()}${ext}`;
     const { error } = await supabaseAdmin.storage
         .from('chamados')
-        .upload(nomeArq, arquivo.buffer, { contentType: arquivo.mimetype });
+        .upload(nomeArq, buffer, { contentType });
     if (error) { console.error('[Storage] Erro upload:', error.message); return null; }
     const { data } = supabaseAdmin.storage.from('chamados').getPublicUrl(nomeArq);
     return data.publicUrl;
@@ -81,12 +66,12 @@ const transporter = nodemailer.createTransport({
 // ==========================================
 
 // Criar Chamado
-app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
+app.post('/api/chamados', async (req, res) => {
     try {
-        const { nome, cpf, email, telefone, assunto, descricao, numero } = req.body;
+        const { nome, cpf, email, telefone, assunto, descricao, numero, arquivos: arquivosB64 = [] } = req.body;
         const cpfLimpo = cpf ? cpf.replace(/\D/g, '') : null;
         const oab = numero || '---';
-        const arquivos = req.files || [];
+        const arquivos = arquivosB64; // [{name, type, data}] em base64
         const protocolo = await gerarProtocoloUnico();
         const portalUrl = process.env.PUBLIC_URL || 'https://chamados-gerid.netlify.app';
 
@@ -100,8 +85,9 @@ app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
 
         // Upload dos arquivos para Supabase Storage
         const imageURLs = [];
-        for (const arquivo of arquivos) {
-            const url = await uploadParaStorage(protocolo, arquivo);
+        for (const arq of arquivos) {
+            const buf = Buffer.from(arq.data, 'base64');
+            const url = await uploadParaStorage(protocolo, buf, arq.name, arq.type);
             if (url) imageURLs.push(url);
         }
 
@@ -151,7 +137,7 @@ app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
             to: process.env.SMTP_TO,
             subject: `NOVO CHAMADO - PROTOCOLO #${protocolo} - ${assunto}`,
             html: htmlSuporte,
-            attachments: arquivos.map(f => ({ filename: f.originalname, content: f.buffer }))
+            attachments: arquivos.map(f => ({ filename: f.name, content: Buffer.from(f.data, 'base64') }))
         });
 
         await transporter.sendMail({
@@ -246,11 +232,11 @@ app.get('/api/public/chamados/:id', async (req, res) => {
 });
 
 // Resolver Pendência
-app.patch('/api/public/chamados/:id/resolver', upload.array('imagens', 4), async (req, res) => {
+app.patch('/api/public/chamados/:id/resolver', async (req, res) => {
     try {
         const { id } = req.params;
-        const { nome, cpf, email, telefone, assunto, descricao, nova_observacao } = req.body;
-        const arquivos = req.files || [];
+        const { nome, cpf, email, telefone, assunto, descricao, nova_observacao, arquivos: arquivosB64 = [] } = req.body;
+        const arquivos = arquivosB64;
         const portalUrl = process.env.PUBLIC_URL || 'https://chamados-gerid.netlify.app';
 
         const { data: chamado, error: findError } = await supabaseAdmin
@@ -267,8 +253,9 @@ app.patch('/api/public/chamados/:id/resolver', upload.array('imagens', 4), async
 
         // Upload dos novos arquivos
         const novasUrls = [];
-        for (const arquivo of arquivos) {
-            const url = await uploadParaStorage(protocolo, arquivo);
+        for (const arq of arquivos) {
+            const buf = Buffer.from(arq.data, 'base64');
+            const url = await uploadParaStorage(protocolo, buf, arq.name, arq.type);
             if (url) novasUrls.push(url);
         }
 
@@ -298,7 +285,7 @@ app.patch('/api/public/chamados/:id/resolver', upload.array('imagens', 4), async
                 <p><strong>${nome}</strong> atualizou as informações do chamado.</p>
                 <p><strong>Observação:</strong> ${nova_observacao || 'Nenhuma.'}</p>
                 <p>Verifique o painel do agente.</p></div>`,
-            attachments: arquivos.map(f => ({ filename: f.originalname, content: f.buffer }))
+            attachments: arquivos.map(f => ({ filename: f.name, content: Buffer.from(f.data, 'base64') }))
         });
 
         await transporter.sendMail({

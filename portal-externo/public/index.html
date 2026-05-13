@@ -598,6 +598,16 @@
             atualizarPrevia(); // Renderiza de novo
         }
 
+        // Converte File para {name, type, data (base64)}
+        function toBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve({ name: file.name, type: file.type, data: reader.result.split(',')[1] });
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
         // --- ENVIO DO FORMULÁRIO ---
         const boxStatus = document.getElementById('boxStatus');
         const textoStatus = document.getElementById('textoStatus');
@@ -635,21 +645,21 @@
             btnSubmit.innerHTML = '...';
             btnSubmit.disabled = true;
 
-            // Criar o FormData e adicionar os dados manuais + as imagens acumuladas
-            const formData = new FormData(e.target);
-
-            // Remove o campo original vazio do formulário
-            formData.delete('imagens');
-
-            // Anexa os arquivos que o usuário acumulou na nossa variável JavaScript
-            arquivosSelecionados.forEach((arquivo) => {
-                formData.append('imagens', arquivo);
-            });
-
             try {
+                const arquivosB64 = await Promise.all(arquivosSelecionados.map(toBase64));
                 const response = await fetch('/api/chamados', {
                     method: 'POST',
-                    body: formData
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nome: document.getElementById('nome').value,
+                        cpf: document.getElementById('cpf').value,
+                        email: document.getElementById('email').value,
+                        telefone: document.getElementById('telefone').value,
+                        numero: document.getElementById('numero').value,
+                        assunto: document.getElementById('assunto').value,
+                        descricao: document.getElementById('descricao').value,
+                        arquivos: arquivosB64
+                    })
                 });
 
                 const result = await response.json();
@@ -945,24 +955,29 @@
         // --- Lógica do Form de Resolução ---
         document.getElementById('resolverForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const formData = new FormData(e.target);
-            const id = formData.get('id');
-            console.log("Enviando resolução para o chamado ID:", id);
+            const id = document.getElementById('resolverId').value;
 
             if (!id || id === 'undefined') {
                 mostrarStatus("Erro: ID do chamado não identificado. Recarregue a página.", true);
                 return;
             }
 
-            // Adiciona arquivos do array global
-            formData.delete('imagens');
-            arquivosSelecionadosR.forEach(f => formData.append('imagens', f));
-
             try {
                 mostrarStatus("Salvando alterações...");
+                const arquivosB64 = await Promise.all(arquivosSelecionadosR.map(toBase64));
                 const response = await fetch(`/api/public/chamados/${id}/resolver`, {
                     method: 'PATCH',
-                    body: formData
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nome: document.getElementById('nomeR').value,
+                        cpf: document.getElementById('cpfR').value,
+                        email: document.getElementById('emailR').value,
+                        telefone: document.getElementById('telefoneR').value,
+                        assunto: document.getElementById('assuntoR').value,
+                        descricao: document.getElementById('descricaoR').value,
+                        nova_observacao: document.querySelector('#resolverForm [name="nova_observacao"]')?.value || '',
+                        arquivos: arquivosB64
+                    })
                 });
 
                 if (response.ok) {
