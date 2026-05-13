@@ -4,16 +4,20 @@ const nodemailer = require('nodemailer');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs-extra');
-const axios = require('axios');
-const { convert } = require('html-to-text');
 const { Pool } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
 
-// Configuração Supabase (PostgreSQL)
+// Banco de dados (PostgreSQL via Supabase)
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
 });
+
+// Supabase Storage (service role — somente no servidor, nunca exposto)
+const supabaseAdmin = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY
+);
 
 function parseJson(val) {
     if (!val) return [];
@@ -21,7 +25,6 @@ function parseJson(val) {
     try { return JSON.parse(val); } catch { return []; }
 }
 
-// Gerador de Protocolo Único com retry em caso de colisão
 async function gerarProtocoloUnico() {
     const ano = new Date().getFullYear();
     for (let tentativa = 0; tentativa < 5; tentativa++) {
@@ -33,7 +36,6 @@ async function gerarProtocoloUnico() {
     throw new Error('Não foi possível gerar um protocolo único. Tente novamente.');
 }
 
-// Validador de CPF (Algoritmo Oficial)
 function validarCPF(cpf) {
     cpf = cpf.replace(/[^\d]+/g, '');
     if (cpf.length !== 11 || !!cpf.match(/(\d)\1{10}/)) return false;
@@ -42,31 +44,14 @@ function validarCPF(cpf) {
     return rest(10) === cpfs[9] && rest(11) === cpfs[10];
 }
 
-// Desabilita verificação SSL apenas para o GLPI (certificado interno)
-// Não usar em produção com serviços externos críticos
-
 const app = express();
-const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
-
-fs.ensureDirSync(UPLOADS_DIR);
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ==========================================
-// CONFIGURAÇÕES (MULTER & SMTP)
-// ==========================================
+// Multer em memória — sem escrita em disco (compatível com Netlify Functions)
 const TIPOS_PERMITIDOS = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 const EXTENSOES_PERMITIDAS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname).toLowerCase();
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + ext);
-    }
-});
 
 function fileFilter(req, file, cb) {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -77,380 +62,258 @@ function fileFilter(req, file, cb) {
     }
 }
 
-const upload = multer({ storage, fileFilter, limits: { fileSize: 20 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), fileFilter, limits: { fileSize: 20 * 1024 * 1024 } });
 
+async function uploadParaStorage(protocolo, arquivo) {
+    const nomeArq = `${protocolo}/${Date.now()}-${arquivo.originalname}`;
+    const { error } = await supabaseAdmin.storage
+        .from('chamados')
+        .upload(nomeArq, arquivo.buffer, { contentType: arquivo.mimetype });
+    if (error) { console.error('[Storage] Erro upload:', error.message); return null; }
+    const { data } = supabaseAdmin.storage.from('chamados').getPublicUrl(nomeArq);
+    return data.publicUrl;
+}
 
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'cloud54.mailgrid.net.br',
+    host: process.env.SMTP_HOST,
     port: process.env.SMTP_PORT || 587,
-    secure: false, // true para 465, false para outras portas
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-    },
+    secure: false,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
     tls: { rejectUnauthorized: false }
 });
 
 // ==========================================
-// SERVIÇO DE INTEGRAÇÃO COM O GLPI
-// ==========================================
-class GlpiService {
-    constructor() {
-        this.baseUrl = process.env.GLPI_URL;
-        this.appToken = process.env.GLPI_APP_TOKEN;
-        this.userToken = process.env.GLPI_USER_TOKEN;
-    }
-
-    async conectar() {
-        try {
-            const res = await axios.get(`${this.baseUrl}/initSession`, {
-                headers: {
-                    'App-Token': this.appToken,
-                    'Authorization': `user_token ${this.userToken}`
-                },
-                httpsAgent: new (require('https').Agent)({ rejectUnauthorized: false })
-            });
-            return res.data.session_token;
-        } catch (error) {
-            console.error("[GLPI] Erro de autenticação:", error.message);
-            throw new Error("Falha ao conectar no GLPI");
-        }
-    }
-
-    async desconectar(sessionToken) {
-        if (!sessionToken) return;
-        await axios.get(`${this.baseUrl}/killSession`, {
-            headers: {
-                'App-Token': this.appToken,
-                'Session-Token': sessionToken
-            },
-            httpsAgent: new (require('https').Agent)({ rejectUnauthorized: false })
-        });
-    }
-}
-const glpiAPI = new GlpiService();
-
-// ==========================================
-// ROTAS PÚBLICAS
+// ROTAS
 // ==========================================
 
-// Criar Chamado no GLPI (Via E-mail para o Coletor)
+// Criar Chamado
 app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
     try {
-        const { nome, cpf, email, telefone, oab, assunto, categoria, descricao, numero } = req.body;
-
-        // Limpa o CPF para salvar apenas números no banco
+        const { nome, cpf, email, telefone, assunto, descricao, numero } = req.body;
         const cpfLimpo = cpf ? cpf.replace(/\D/g, '') : null;
-        const oabForm = numero; // Mapeia o campo 'numero' do form para a variavel 'oab'
+        const oab = numero || '---';
         const arquivos = req.files || [];
         const protocolo = await gerarProtocoloUnico();
+        const portalUrl = process.env.PUBLIC_URL || 'https://gerid.netlify.app';
 
-        console.log(`[Portal Externo] Criando chamado. Protocolo: ${protocolo}`);
-
-        // Validador de e-mail de teste (melhorado para não bloquear oabce)
         const parteInicial = email.split('@')[0].toLowerCase();
-        const listaBloqueada = ['teste', 'test', 'asdf', '123456', 'abcde'];
-        if (listaBloqueada.includes(parteInicial)) {
-            return res.status(400).json({ error: 'Por favor, informe um e-mail válido e evite endereços de teste.' });
+        if (['teste', 'test', 'asdf', '123456', 'abcde'].includes(parteInicial)) {
+            return res.status(400).json({ error: 'Por favor, informe um e-mail válido.' });
         }
-
-        // Validador de CPF Real
         if (!cpf || !validarCPF(cpf)) {
-            return res.status(400).json({ error: 'O CPF informado é inválido. Por favor, confira os números.' });
+            return res.status(400).json({ error: 'O CPF informado é inválido.' });
         }
 
-        // 1. Gerar Links das Imagens
-        const baseUrl = process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
-        const imageURLs = arquivos.map(file => `${baseUrl}/uploads/${path.basename(file.path)}`);
+        // Upload dos arquivos para Supabase Storage
+        const imageURLs = [];
+        for (const arquivo of arquivos) {
+            const url = await uploadParaStorage(protocolo, arquivo);
+            if (url) imageURLs.push(url);
+        }
 
-        // 2. SALVAR NO SUPABASE
+        const historico = JSON.stringify([{
+            status: 'Aberto',
+            observacao: 'Chamado aberto pelo solicitante',
+            data: new Date().toISOString(),
+            agente: 'Sistema'
+        }]);
+
         await pool.query(
-            `INSERT INTO chamados (protocolo, nome, cpf, email, telefone, oab, assunto, descricao, status, imagens, criado_em)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-            [protocolo, nome, cpfLimpo, email, telefone, oab || '---', assunto, descricao, 'Aberto',
-             JSON.stringify(imageURLs), new Date()]
+            `INSERT INTO chamados (protocolo, nome, cpf, email, telefone, oab, assunto, descricao, status, imagens, historico, criado_em, atualizado_em)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12)`,
+            [protocolo, nome, cpfLimpo, email, telefone, oab, assunto, descricao,
+             'Aberto', JSON.stringify(imageURLs), historico, new Date()]
         );
 
-        const anexosFormatados = arquivos.map(file => ({
-            filename: file.originalname,
-            path: file.path
-        }));
-
-        // 3. ENVIAR E-MAIL DE AVISO (Para o suporte/você)
         const isGerid = assunto.toLowerCase().includes('gerid');
-
-        const templateGerid = `
-            <div style="font-family: sans-serif; max-width: 600px; color: #333;">
+        const htmlSuporte = isGerid ? `
+            <div style="font-family:sans-serif;max-width:600px;color:#333">
                 <p><strong>Dados para inserir no chamado do INSS</strong></p>
-                <br>
                 <p><strong>Nome:</strong> ${nome}</p>
-                <p><strong>OAB:</strong> ${oab || 'Não informado'}</p>
+                <p><strong>OAB:</strong> ${oab}</p>
                 <p><strong>CPF:</strong> ${cpf}</p>
-                <p><strong>E-MAIL:</strong> ${email}</p>
+                <p><strong>E-mail:</strong> ${email}</p>
                 <p><strong>Telefone:</strong> ${telefone}</p>
-                <br>
-                <p><strong>Descrição:</strong></p>
-                <p>${descricao}</p>
-                <br>
-                <hr>
-                <p>Ordem dos Advogados do Brasil - Secção Ceará</p>
-                <p>07375512000181</p>
-                <p>Protocolo: ${protocolo}</p>
-                <p>Link do Portal: <a href="http://localhost:3000">Acessar Portal</a></p>
-            </div>
-        `;
-
-        const templatePadrao = `
-            <div style="font-family: sans-serif; max-width: 600px; color: #333;">
+                <p><strong>Descrição:</strong> ${descricao}</p>
+                <hr><p>Protocolo: ${protocolo}</p>
+            </div>` : `
+            <div style="font-family:sans-serif;max-width:600px;color:#333">
                 <p><strong>Novo chamado recebido via Portal</strong></p>
-                <br>
                 <p><strong>Nome:</strong> ${nome}</p>
-                <p><strong>OAB:</strong> ${oab || 'Não informado'}</p>
+                <p><strong>OAB:</strong> ${oab}</p>
                 <p><strong>CPF:</strong> ${cpf}</p>
-                <p><strong>E-MAIL:</strong> ${email}</p>
+                <p><strong>E-mail:</strong> ${email}</p>
                 <p><strong>Telefone:</strong> ${telefone}</p>
-                <br>
                 <p><strong>Assunto:</strong> ${assunto}</p>
-                <p><strong>Descrição:</strong></p>
-                <p>${descricao}</p>
-                <hr>
-                <p>Protocolo: ${protocolo}</p>
-                <p>Link do Portal: <a href="http://localhost:3000">Acessar Portal</a></p>
-            </div>
-        `;
+                <p><strong>Descrição:</strong> ${descricao}</p>
+                <hr><p>Protocolo: ${protocolo}</p>
+            </div>`;
 
-        const mailOptions = {
+        await transporter.sendMail({
             from: process.env.SMTP_FROM,
             to: process.env.SMTP_TO,
             subject: `NOVO CHAMADO - PROTOCOLO #${protocolo} - ${assunto}`,
-            html: isGerid ? templateGerid : templatePadrao,
-            attachments: anexosFormatados
-        };
-        await transporter.sendMail(mailOptions);
+            html: htmlSuporte,
+            attachments: arquivos.map(f => ({ filename: f.originalname, content: f.buffer }))
+        });
 
-        // 4. ENVIAR E-MAIL DE CONFIRMAÇÃO PARA O USUÁRIO (SOLICITANTE)
-        const portalUrl = process.env.PUBLIC_URL || 'http://192.168.0.253:3003/';
-        const userMailOptions = {
+        await transporter.sendMail({
             from: process.env.SMTP_FROM,
             to: email,
             subject: `Confirmação de Abertura de Chamado - Protocolo #${protocolo}`,
             html: `
-                <div style="font-family: sans-serif; max-width: 600px; color: #333;">
-                    <h2 style="color: #3b82f6; border-bottom: 2px solid #3b82f6; pb-10px;">Recebemos sua solicitação!</h2>
+                <div style="font-family:sans-serif;max-width:600px;color:#333">
+                    <h2 style="color:#3b82f6;border-bottom:2px solid #3b82f6">Recebemos sua solicitação!</h2>
                     <p>Olá <strong>${nome}</strong>,</p>
-                    <p>Seu chamado foi registrado com sucesso em nosso sistema.</p>
-                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                    <p><strong>Protocolo:</strong> <span style="font-size: 1.2em; font-weight: bold; color: #3b82f6;">${protocolo}</span></p>
+                    <p>Seu chamado foi registrado com sucesso.</p>
+                    <hr style="border:none;border-top:1px solid #eee;margin:20px 0">
+                    <p><strong>Protocolo:</strong> <span style="color:#3b82f6;font-weight:bold">${protocolo}</span></p>
                     <p><strong>Assunto:</strong> ${assunto}</p>
-                    <p><strong>Status Inicial:</strong> <span style="color: #3b82f6; font-weight: bold;">Aberto</span></p>
-                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                    <p>Você pode acompanhar o status do seu atendimento através do nosso portal:</p>
-                    <p><a href="${portalUrl}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Acompanhar Status</a></p>
-                    <br>
-                    <p style="font-size: 11px; color: #777;">Atenciosamente,<br>Equipe de Tecnologia OAB-CE</p>
-                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                    <p style="color: #d32f2f; font-weight: bold; text-align: center; font-size: 14px;">⚠️ Por favor, não responder esse e-mail.</p>
-                </div>
-            `
-        };
+                    <hr style="border:none;border-top:1px solid #eee;margin:20px 0">
+                    <p><a href="${portalUrl}?aba=consultar" style="display:inline-block;padding:12px 24px;background-color:#3b82f6;color:white;text-decoration:none;border-radius:8px;font-weight:bold">Acompanhar Status</a></p>
+                    <p style="font-size:11px;color:#777">Atenciosamente,<br>Equipe de Tecnologia OAB-CE</p>
+                    <p style="color:#d32f2f;font-weight:bold;text-align:center;font-size:14px">⚠️ Por favor, não responder esse e-mail.</p>
+                </div>`
+        }).catch(err => console.error('[E-mail] Confirmação usuário:', err.message));
 
-        try {
-            await transporter.sendMail(userMailOptions);
-        } catch (err) {
-            console.error(`[E-mail] Erro ao enviar confirmação para o usuário:`, err.message);
-        }
-
-        res.status(201).json({
-            message: 'Sua solicitação foi enviada com sucesso! Você receberá uma confirmação por e-mail em breve.',
-            protocolo: 'Enviado por e-mail'
-        });
+        res.status(201).json({ message: 'Solicitação enviada com sucesso!', protocolo });
 
     } catch (error) {
-        console.error("Erro ao processar solicitação:", error);
-        res.status(500).json({ error: 'Erro ao enviar sua solicitação. Tente novamente mais tarde.' });
+        console.error('Erro ao criar chamado:', error.message);
+        res.status(500).json({ error: 'Erro ao enviar sua solicitação. Tente novamente.' });
     }
 });
 
 // Listar Categorias
 app.get('/api/public/categorias', async (req, res) => {
     try {
-        const { rows: data } = await pool.query('SELECT * FROM categorias WHERE ativo = true ORDER BY nome ASC');
-        res.json(data || []);
+        const { rows } = await pool.query('SELECT * FROM categorias WHERE ativo = true ORDER BY nome ASC');
+        res.json(rows || []);
     } catch (error) {
-        console.error("Erro ao carregar categorias:", error.message);
         res.status(500).json({ error: 'Erro ao carregar categorias' });
     }
 });
 
-// Consultar Chamado (Por Protocolo ou CPF)
+// Consultar Chamado por CPF ou Protocolo
 app.get('/api/public/chamados/:id', async (req, res) => {
     try {
         const { id } = req.params;
-
-        // Busca flexível: tenta encontrar pelo CPF limpo (apenas números) ou pelo valor original formatado
         const cleanCPF = id.replace(/\D/g, '');
         const { rows: chamados } = await pool.query(
             'SELECT * FROM chamados WHERE cpf = $1 OR cpf = $2 ORDER BY criado_em DESC',
             [cleanCPF, id]
         );
 
-        chamados.forEach(c => {
-            c.imagens = parseJson(c.imagens);
-            c.historico = parseJson(c.historico);
-        });
-
         if (!chamados || chamados.length === 0) {
             return res.status(404).json({ error: 'Nenhum chamado encontrado para este CPF.' });
         }
 
-        // Formata os dados para o frontend (incluindo um histórico básico baseado no status atual)
         const formatados = chamados.map(c => {
-            let obsHistorico = c.observacao || 'Seu chamado está sendo processado.';
-
-            // Se for pendência concluída, mostra uma mensagem padrão no público
-            if (c.status === 'Pendência Concluída') {
-                obsHistorico = 'Informações recebidas. Aguardando análise do suporte.';
-            }
+            const historico = parseJson(c.historico);
+            const historicoFinal = historico.length > 0 ? historico : [
+                { status: 'Aberto', data: c.criado_em, observacao: 'Chamado recebido pelo portal.', agente: 'Sistema' },
+                ...(c.status !== 'Aberto' ? [{
+                    status: c.status,
+                    data: c.atualizado_em || new Date().toISOString(),
+                    observacao: c.observacao || 'Seu chamado está sendo processado.',
+                    agente: 'Suporte'
+                }] : [])
+            ];
 
             return {
-                id: c.id,
-                protocolo: c.protocolo,
-                nome: c.nome,
-                cpf: c.cpf,
-                email: c.email,
-                telefone: c.telefone,
-                assunto: c.assunto,
-                descricao: c.descricao,
-                status: c.status || 'Novo',
+                id: c.id, protocolo: c.protocolo, nome: c.nome,
+                cpf: c.cpf, email: c.email, telefone: c.telefone,
+                oab: c.oab, assunto: c.assunto, descricao: c.descricao,
+                status: c.status || 'Aberto',
                 data: c.criado_em,
-                historico: [
-                    {
-                        status: 'Aberto',
-                        data: c.criado_em,
-                        observacao: 'Chamado recebido pelo portal.'
-                    },
-                    ...(c.status !== 'Novo' ? [{
-                        status: c.status,
-                        data: new Date().toISOString(),
-                        observacao: obsHistorico
-                    }] : [])
-                ]
+                imagens: parseJson(c.imagens),
+                historico: historicoFinal
             };
         });
 
         res.status(200).json(formatados);
-
     } catch (error) {
-        console.error("Erro ao consultar:", error.message);
+        console.error('Erro ao consultar:', error.message);
         res.status(500).json({ error: 'Erro ao consultar chamado' });
     }
 });
 
-// Resolver Pendência (Pelo Usuário)
+// Resolver Pendência
 app.patch('/api/public/chamados/:id/resolver', upload.array('imagens', 4), async (req, res) => {
     try {
         const { id } = req.params;
         const { nome, cpf, email, telefone, assunto, descricao, nova_observacao } = req.body;
         const arquivos = req.files || [];
+        const portalUrl = process.env.PUBLIC_URL || 'https://gerid.netlify.app';
 
-        console.log(`[Portal Externo] Usuário resolvendo pendência no chamado: ${id}`);
+        const { rows } = await pool.query('SELECT imagens, historico, protocolo FROM chamados WHERE id = $1', [id]);
+        if (!rows[0]) return res.status(404).json({ error: 'Chamado não encontrado.' });
 
-        // 1. Gerar Links das Novas Imagens
-        const baseUrl = process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
-        const novasImagens = arquivos.map(file => `${baseUrl}/uploads/${path.basename(file.path)}`);
+        const { protocolo, imagens, historico } = rows[0];
+        const imagensAtuais = parseJson(imagens);
+        const historicoAtual = parseJson(historico);
 
-        // 2. Busca imagens atuais para não sobrescrever (Merge)
-        const { rows } = await pool.query('SELECT imagens, protocolo FROM chamados WHERE id = $1', [id]);
-        const chamadoAtual = rows[0];
-        if (!chamadoAtual) {
-            return res.status(404).json({ error: 'Chamado não encontrado.' });
+        // Upload dos novos arquivos
+        const novasUrls = [];
+        for (const arquivo of arquivos) {
+            const url = await uploadParaStorage(protocolo, arquivo);
+            if (url) novasUrls.push(url);
         }
-        const protocoloOriginal = chamadoAtual.protocolo;
 
-        const imagensAtuais = parseJson(chamadoAtual?.imagens);
-        const imagensAtualizadas = [...imagensAtuais, ...novasImagens];
+        const novoHistorico = [...historicoAtual, {
+            status: 'Pendência Concluída',
+            observacao: nova_observacao || 'Pendência resolvida pelo solicitante',
+            data: new Date().toISOString(),
+            agente: 'Solicitante'
+        }];
 
-        // 3. Atualiza no Supabase
         await pool.query(
             `UPDATE chamados SET nome=$1, cpf=$2, email=$3, telefone=$4, assunto=$5, descricao=$6,
-             status=$7, resposta_usuario=$8, imagens=$9 WHERE id=$10`,
+             status=$7, resposta_usuario=$8, imagens=$9, historico=$10, atualizado_em=$11 WHERE id=$12`,
             [nome, cpf, email, telefone, assunto, descricao, 'Pendência Concluída',
-             nova_observacao || null, JSON.stringify(imagensAtualizadas), id]
+             nova_observacao || null, JSON.stringify([...imagensAtuais, ...novasUrls]),
+             JSON.stringify(novoHistorico), new Date(), id]
         );
 
-        // 4. Envia E-mail de Aviso para o Suporte
-        const mailOptions = {
+        await transporter.sendMail({
             from: process.env.SMTP_FROM,
             to: process.env.SMTP_TO,
             subject: `PENDÊNCIA RESOLVIDA - ${assunto}`,
-            html: `
-                <div style="font-family: sans-serif; max-width: 600px; color: #333;">
-                    <h2 style="color: #D97706;">Pendência Resolvida pelo Usuário</h2>
-                    <p>O usuário <strong>${nome}</strong> atualizou as informações do chamado.</p>
-                    <hr>
-                    <p><strong>Observação do Usuário:</strong> ${nova_observacao || 'Nenhuma observação enviada.'}</p>
-                    <hr>
-                    <p>Verifique o painel do agente para processar o atendimento.</p>
-                </div>
-            `,
-            attachments: arquivos.map(f => ({ filename: f.originalname, path: f.path }))
-        };
+            html: `<div style="font-family:sans-serif;max-width:600px;color:#333">
+                <h2 style="color:#D97706">Pendência Resolvida pelo Usuário</h2>
+                <p><strong>${nome}</strong> atualizou as informações do chamado.</p>
+                <p><strong>Observação:</strong> ${nova_observacao || 'Nenhuma.'}</p>
+                <p>Verifique o painel do agente.</p></div>`,
+            attachments: arquivos.map(f => ({ filename: f.originalname, content: f.buffer }))
+        });
 
-        await transporter.sendMail(mailOptions);
-
-        // 5. ENVIA E-MAIL DE CONFIRMAÇÃO PARA O USUÁRIO
-        const portalUrl = process.env.PUBLIC_URL || 'http://192.168.0.253:3003/';
-        const userMailOptions = {
+        await transporter.sendMail({
             from: process.env.SMTP_FROM,
             to: email,
-            subject: `Pendência Recebida - Protocolo #${protocoloOriginal}`,
-            html: `
-                <div style="font-family: sans-serif; max-width: 600px; color: #333;">
-                    <h2 style="color: #10b981; border-bottom: 2px solid #10b981; pb-10px;">Informações Recebidas: Pendência Concluída</h2>
-                    <p>Olá <strong>${nome}</strong>,</p>
-                    <p>Recebemos as informações complementares para o seu chamado.</p>
-                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                    <p><strong>Novo Status:</strong> <span style="color: #10b981; font-weight: bold;">Pendência Concluída</span></p>
-                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                    <p>Nossa equipe foi notificada e em breve você receberá uma nova atualização sobre o seu atendimento.</p>
-                    <p>Você pode continuar acompanhando pelo portal:</p>
-                    <p><a href="${portalUrl}" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Acompanhar Status</a></p>
-                    <br>
-                    <p style="font-size: 11px; color: #777;">Atenciosamente,<br>Equipe de Tecnologia OAB-CE</p>
-                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                    <p style="color: #d32f2f; font-weight: bold; text-align: center; font-size: 14px;">⚠️ Por favor, não responder esse e-mail.</p>
-                </div>
-            `
-        };
-
-        await transporter.sendMail(userMailOptions);
-        console.log(`[Notificação] Confirmação de pendência enviada para ${email}`);
+            subject: `Pendência Recebida - Protocolo #${protocolo}`,
+            html: `<div style="font-family:sans-serif;max-width:600px;color:#333">
+                <h2 style="color:#10b981;border-bottom:2px solid #10b981">Informações Recebidas</h2>
+                <p>Olá <strong>${nome}</strong>, recebemos suas informações complementares.</p>
+                <p><strong>Novo Status:</strong> <span style="color:#10b981;font-weight:bold">Pendência Concluída</span></p>
+                <p><a href="${portalUrl}?aba=consultar" style="display:inline-block;padding:12px 24px;background:#10b981;color:white;text-decoration:none;border-radius:8px;font-weight:bold">Acompanhar Status</a></p>
+                <p style="font-size:11px;color:#777">Atenciosamente,<br>Equipe de Tecnologia OAB-CE</p>
+                <p style="color:#d32f2f;font-weight:bold;text-align:center;font-size:14px">⚠️ Por favor, não responder esse e-mail.</p>
+            </div>`
+        }).catch(err => console.error('[E-mail] Confirmação resolver:', err.message));
 
         res.json({ success: true, message: 'Pendência enviada com sucesso!' });
 
     } catch (error) {
-        console.error("Erro ao resolver pendência:", error.message);
+        console.error('Erro ao resolver pendência:', error.message);
         res.status(500).json({ error: 'Erro ao processar sua resolução.' });
     }
 });
 
-// Inicialização do Servidor
-const PORT = process.env.PORT_PUBLICO || 3000;
-
-async function iniciarServidor() {
-    try {
-        const tokenTeste = await glpiAPI.conectar();
-        if (tokenTeste) {
-            console.log('✅ Integração GLPI (Público): Ativa!');
-            await glpiAPI.desconectar(tokenTeste);
-        }
-    } catch (error) {
-        console.error('❌ Erro na integração GLPI:', error.message);
-    }
-
-    app.listen(PORT, () => {
-        console.log(`🚀 Portal Público rodando na porta ${PORT}`);
-    });
+// Exporta o app para uso como Netlify Function
+// e mantém o listen para desenvolvimento local
+if (require.main === module) {
+    const PORT = process.env.PORT_PUBLICO || 3000;
+    app.listen(PORT, () => console.log(`Portal Público rodando na porta ${PORT}`));
 }
 
-iniciarServidor();
+module.exports = app;

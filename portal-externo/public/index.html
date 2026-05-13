@@ -532,7 +532,7 @@
             });
 
             try {
-                const response = await fetch('/gerid/api/chamados', {
+                const response = await fetch('/api/chamados', {
                     method: 'POST',
                     body: formData
                 });
@@ -652,7 +652,7 @@
             `;
 
             try {
-                const response = await fetch(`/gerid/api/public/chamados/${id}`);
+                const response = await fetch(`/api/public/chamados/${id}`);
                 const data = await response.json();
 
                 if (response.ok && Array.isArray(data) && data.length > 0) {
@@ -841,7 +841,7 @@
 
             try {
                 mostrarStatus("Salvando alterações...");
-                const response = await fetch(`/gerid/api/public/chamados/${id}/resolver`, {
+                const response = await fetch(`/api/public/chamados/${id}/resolver`, {
                     method: 'PATCH',
                     body: formData
                 });
@@ -876,7 +876,7 @@
             const select = document.getElementById('assunto');
             const selectR = document.getElementById('assuntoR');
             try {
-                const response = await fetch('/gerid/api/public/categorias');
+                const response = await fetch('/api/public/categorias');
                 const data = await response.json();
                 listaCategorias = Array.isArray(data) ? data : [];
 
