@@ -1,3 +1,6 @@
+# Painel interno — não publicar
+portal-interno/
+
 # Credenciais — nunca subir
 .env
 *.env
