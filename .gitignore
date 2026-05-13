@@ -1,0 +1,14 @@
+# Credenciais — nunca subir
+.env
+*.env
+
+# Dependências
+node_modules/
+*/node_modules/
+
+# Uploads gerados em runtime
+portal-externo/public/uploads/
+
+# Logs
+*.log
+npm-debug.log*
