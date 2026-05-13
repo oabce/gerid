@@ -4,16 +4,9 @@ const nodemailer = require('nodemailer');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const { Pool } = require('pg');
 const { createClient } = require('@supabase/supabase-js');
 
-// Banco de dados (PostgreSQL via Supabase)
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-});
-
-// Supabase Storage (service role — somente no servidor, nunca exposto)
+// Supabase (service role — somente no servidor, nunca exposto)
 const supabaseAdmin = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_KEY
@@ -21,6 +14,7 @@ const supabaseAdmin = createClient(
 
 function parseJson(val) {
     if (!val) return [];
+    if (Array.isArray(val)) return val;
     if (typeof val === 'object') return val;
     try { return JSON.parse(val); } catch { return []; }
 }
@@ -30,8 +24,8 @@ async function gerarProtocoloUnico() {
     for (let tentativa = 0; tentativa < 5; tentativa++) {
         const random = Math.floor(1000 + Math.random() * 9000);
         const protocolo = `${ano}-${random}`;
-        const { rows } = await pool.query('SELECT id FROM chamados WHERE protocolo = $1', [protocolo]);
-        if (rows.length === 0) return protocolo;
+        const { data } = await supabaseAdmin.from('chamados').select('id').eq('protocolo', protocolo).maybeSingle();
+        if (!data) return protocolo;
     }
     throw new Error('Não foi possível gerar um protocolo único. Tente novamente.');
 }
@@ -94,7 +88,7 @@ app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
         const oab = numero || '---';
         const arquivos = req.files || [];
         const protocolo = await gerarProtocoloUnico();
-        const portalUrl = process.env.PUBLIC_URL || 'https://gerid.netlify.app';
+        const portalUrl = process.env.PUBLIC_URL || 'https://chamados-gerid.netlify.app';
 
         const parteInicial = email.split('@')[0].toLowerCase();
         if (['teste', 'test', 'asdf', '123456', 'abcde'].includes(parteInicial)) {
@@ -111,19 +105,22 @@ app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
             if (url) imageURLs.push(url);
         }
 
-        const historico = JSON.stringify([{
+        const historico = [{
             status: 'Aberto',
             observacao: 'Chamado aberto pelo solicitante',
             data: new Date().toISOString(),
             agente: 'Sistema'
-        }]);
+        }];
 
-        await pool.query(
-            `INSERT INTO chamados (protocolo, nome, cpf, email, telefone, oab, assunto, descricao, status, imagens, historico, criado_em, atualizado_em)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12)`,
-            [protocolo, nome, cpfLimpo, email, telefone, oab, assunto, descricao,
-             'Aberto', JSON.stringify(imageURLs), historico, new Date()]
-        );
+        const { error: insertError } = await supabaseAdmin.from('chamados').insert({
+            protocolo, nome, cpf: cpfLimpo, email, telefone, oab, assunto, descricao,
+            status: 'Aberto',
+            imagens: imageURLs,
+            historico,
+            criado_em: new Date().toISOString(),
+            atualizado_em: new Date().toISOString()
+        });
+        if (insertError) throw new Error(insertError.message);
 
         const isGerid = assunto.toLowerCase().includes('gerid');
         const htmlSuporte = isGerid ? `
@@ -187,23 +184,32 @@ app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
 // Listar Categorias
 app.get('/api/public/categorias', async (req, res) => {
     try {
-        const { rows } = await pool.query('SELECT * FROM categorias WHERE ativo = true ORDER BY nome ASC');
-        res.json(rows || []);
+        const { data, error } = await supabaseAdmin
+            .from('categorias')
+            .select('*')
+            .eq('ativo', true)
+            .order('nome', { ascending: true });
+        if (error) throw new Error(error.message);
+        res.json(data || []);
     } catch (error) {
         console.error('[Categorias] Erro:', error.message);
         res.status(500).json({ error: 'Erro ao carregar categorias' });
     }
 });
 
-// Consultar Chamado por CPF ou Protocolo
+// Consultar Chamado por CPF
 app.get('/api/public/chamados/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const cleanCPF = id.replace(/\D/g, '');
-        const { rows: chamados } = await pool.query(
-            'SELECT * FROM chamados WHERE cpf = $1 OR cpf = $2 ORDER BY criado_em DESC',
-            [cleanCPF, id]
-        );
+
+        const { data: chamados, error } = await supabaseAdmin
+            .from('chamados')
+            .select('*')
+            .or(`cpf.eq.${cleanCPF},cpf.eq.${id}`)
+            .order('criado_em', { ascending: false });
+
+        if (error) throw new Error(error.message);
 
         if (!chamados || chamados.length === 0) {
             return res.status(404).json({ error: 'Nenhum chamado encontrado para este CPF.' });
@@ -245,12 +251,17 @@ app.patch('/api/public/chamados/:id/resolver', upload.array('imagens', 4), async
         const { id } = req.params;
         const { nome, cpf, email, telefone, assunto, descricao, nova_observacao } = req.body;
         const arquivos = req.files || [];
-        const portalUrl = process.env.PUBLIC_URL || 'https://gerid.netlify.app';
+        const portalUrl = process.env.PUBLIC_URL || 'https://chamados-gerid.netlify.app';
 
-        const { rows } = await pool.query('SELECT imagens, historico, protocolo FROM chamados WHERE id = $1', [id]);
-        if (!rows[0]) return res.status(404).json({ error: 'Chamado não encontrado.' });
+        const { data: chamado, error: findError } = await supabaseAdmin
+            .from('chamados')
+            .select('imagens, historico, protocolo')
+            .eq('id', id)
+            .single();
 
-        const { protocolo, imagens, historico } = rows[0];
+        if (findError || !chamado) return res.status(404).json({ error: 'Chamado não encontrado.' });
+
+        const { protocolo, imagens, historico } = chamado;
         const imagensAtuais = parseJson(imagens);
         const historicoAtual = parseJson(historico);
 
@@ -268,13 +279,15 @@ app.patch('/api/public/chamados/:id/resolver', upload.array('imagens', 4), async
             agente: 'Solicitante'
         }];
 
-        await pool.query(
-            `UPDATE chamados SET nome=$1, cpf=$2, email=$3, telefone=$4, assunto=$5, descricao=$6,
-             status=$7, resposta_usuario=$8, imagens=$9, historico=$10, atualizado_em=$11 WHERE id=$12`,
-            [nome, cpf, email, telefone, assunto, descricao, 'Pendência Concluída',
-             nova_observacao || null, JSON.stringify([...imagensAtuais, ...novasUrls]),
-             JSON.stringify(novoHistorico), new Date(), id]
-        );
+        const { error: updateError } = await supabaseAdmin.from('chamados').update({
+            nome, cpf, email, telefone, assunto, descricao,
+            status: 'Pendência Concluída',
+            resposta_usuario: nova_observacao || null,
+            imagens: [...imagensAtuais, ...novasUrls],
+            historico: novoHistorico,
+            atualizado_em: new Date().toISOString()
+        }).eq('id', id);
+        if (updateError) throw new Error(updateError.message);
 
         await transporter.sendMail({
             from: process.env.SMTP_FROM,
