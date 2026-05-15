@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Abertura de Chamados</title>
+    <link rel="icon" type="image/png" href="logo/image.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
@@ -16,6 +17,17 @@
         }
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
         * {
             font-family: 'Inter', sans-serif;
@@ -76,39 +88,39 @@
         }
 
         /* ── MODO CLARO ── */
-        html.light-mode ::-webkit-scrollbar-track { background: #f1f5f9; }
-        html.light-mode ::-webkit-scrollbar-thumb { background: #cbd5e1; }
+        html.light-mode ::-webkit-scrollbar-track { background: #f5f5f5; }
+        html.light-mode ::-webkit-scrollbar-thumb { background: #d4d4d4; }
 
-        html.light-mode body { background-color: #f1f5f9 !important; color: #0f172a !important; }
+        html.light-mode body { background-color: #f5f5f5 !important; color: #171717 !important; }
 
-        html.light-mode .bg-\[\#131313\] { background-color: #f1f5f9 !important; }
+        html.light-mode .bg-\[\#131313\] { background-color: #f5f5f5 !important; }
         html.light-mode .bg-\[\#1e1e1e\] { background-color: #ffffff !important; }
-        html.light-mode .bg-\[\#252525\] { background-color: #e2e8f0 !important; }
-        html.light-mode .bg-\[\#1a1a1a\] { background-color: #f8fafc !important; }
+        html.light-mode .bg-\[\#252525\] { background-color: #e5e5e5 !important; }
+        html.light-mode .bg-\[\#1a1a1a\] { background-color: #fafafa !important; }
 
-        html.light-mode .text-white        { color: #0f172a !important; }
-        html.light-mode .text-slate-200    { color: #1e293b !important; }
-        html.light-mode .text-slate-300    { color: #334155 !important; }
-        html.light-mode .text-slate-400    { color: #475569 !important; }
-        html.light-mode .text-slate-500    { color: #64748b !important; }
-        html.light-mode .text-slate-600    { color: #64748b !important; }
+        html.light-mode .text-white        { color: #171717 !important; }
+        html.light-mode .text-neutral-200    { color: #262626 !important; }
+        html.light-mode .text-neutral-300    { color: #404040 !important; }
+        html.light-mode .text-neutral-400    { color: #525252 !important; }
+        html.light-mode .text-neutral-500    { color: #737373 !important; }
+        html.light-mode .text-neutral-600    { color: #737373 !important; }
 
-        html.light-mode .placeholder-slate-600::placeholder { color: #94a3b8 !important; }
-        html.light-mode input, html.light-mode textarea, html.light-mode select { color: #0f172a !important; }
-        html.light-mode option { background-color: #ffffff; color: #0f172a; }
+        html.light-mode .placeholder-neutral-600::placeholder { color: #a3a3a3 !important; }
+        html.light-mode input, html.light-mode textarea, html.light-mode select { color: #171717 !important; }
+        html.light-mode option { background-color: #ffffff; color: #171717; }
 
         html.light-mode input:-webkit-autofill,
         html.light-mode input:-webkit-autofill:hover,
         html.light-mode input:-webkit-autofill:focus {
             -webkit-box-shadow: 0 0 0 30px #ffffff inset !important;
-            -webkit-text-fill-color: #0f172a !important;
+            -webkit-text-fill-color: #171717 !important;
         }
 
         html.light-mode .bg-white\/5  { background-color: rgba(0,0,0,0.04) !important; }
         html.light-mode .bg-black\/40 { background-color: rgba(0,0,0,0.06) !important; }
         html.light-mode .border-white\/5 { border-color: rgba(0,0,0,0.08) !important; }
         html.light-mode .hover\:bg-white\/5:hover { background-color: rgba(0,0,0,0.04) !important; }
-        html.light-mode .hover\:bg-\[\#252525\]:hover { background-color: #e2e8f0 !important; }
+        html.light-mode .hover\:bg-\[\#252525\]:hover { background-color: #e5e5e5 !important; }
 
         /* Variantes text-white com opacidade */
         html.light-mode .text-white\/80 { color: rgba(0,0,0,0.80) !important; }
@@ -117,23 +129,23 @@
         html.light-mode .text-white\/40 { color: rgba(0,0,0,0.50) !important; }
         html.light-mode .text-white\/30 { color: rgba(0,0,0,0.45) !important; }
         html.light-mode .text-white\/20 { color: rgba(0,0,0,0.40) !important; }
-        html.light-mode .hover\:text-white:hover { color: #0f172a !important; }
+        html.light-mode .hover\:text-white:hover { color: #171717 !important; }
 
-        html.light-mode .bg-\[\#1e1e1e\].inline-flex { background-color: #e2e8f0 !important; }
+        html.light-mode .bg-\[\#1e1e1e\].inline-flex { background-color: #e5e5e5 !important; }
 
         /* Botão de envio: mantém branco no modo claro */
-        html.light-mode .bg-white.text-black { background-color: #0f172a !important; color: #ffffff !important; }
-        html.light-mode .hover\:bg-slate-200:hover { background-color: #1e293b !important; }
+        html.light-mode .bg-white.text-black { background-color: #171717 !important; color: #ffffff !important; }
+        html.light-mode .hover\:bg-neutral-200:hover { background-color: #262626 !important; }
 
         /* Navbar mobile */
         #mobileNav { background-color: #131313; border-bottom: none; }
-        html.light-mode #mobileNav { background-color: #f1f5f9 !important; border-bottom: none !important; }
-        html.light-mode #mobileNav .text-white { color: #0f172a !important; }
-        html.light-mode #mobileNav .text-slate-400 { color: #64748b !important; }
-        html.light-mode #mobileNav .bg-\[\#131313\] { background-color: #e2e8f0 !important; }
+        html.light-mode #mobileNav { background-color: #f5f5f5 !important; border-bottom: none !important; }
+        html.light-mode #mobileNav .text-white { color: #171717 !important; }
+        html.light-mode #mobileNav .text-neutral-400 { color: #737373 !important; }
+        html.light-mode #mobileNav .bg-\[\#131313\] { background-color: #e5e5e5 !important; }
 
         /* Timeline em modo claro — cores dos status e linhas */
-        html.light-mode .text-slate-500.italic { color: #475569 !important; opacity: 1 !important; }
+        html.light-mode .text-neutral-500.italic { color: #475569 !important; opacity: 1 !important; }
         html.light-mode [class*="opacity-80"] { opacity: 1 !important; }
         html.light-mode .text-blue-500   { color: #1d4ed8 !important; }
         html.light-mode .text-purple-500 { color: #7e22ce !important; }
@@ -150,52 +162,68 @@
     </style>
 </head>
 
-<body class="bg-[#131313] h-screen selection:bg-[#303030]/60 text-slate-200 overflow-hidden font-inter">
+<body class="bg-[#131313] h-screen selection:bg-[#303030]/60 text-neutral-200 overflow-hidden font-inter lg:flex">
 
-    <!-- Navbar (mobile e desktop) -->
-    <nav id="mobileNav" class="fixed top-0 left-0 right-0 z-40 h-14 px-5 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-            <div class="w-8 h-8 flex-shrink-0 rounded-lg overflow-hidden">
-                <img src="/logo/image.png" alt="OAB Ceará" class="w-full h-full object-cover">
-            </div>
-            <span id="navbarTitle" class="text-white font-bold text-sm tracking-tight">Novo Chamado</span>
+    <!-- Lado Esquerdo - Mensagem e Degrade (Desktop) -->
+    <div class="hidden lg:flex w-1/2 relative bg-gradient-to-r from-[#254B6C] to-[#893147] flex-col items-center justify-center">
+        
+        <div class="text-center px-10">
+            <p class="text-[10px] font-bold tracking-[0.3em] uppercase text-[#ffffff]/70 mb-4">Bem-vindo ao portal</p>
+            <h1 class="text-3xl xl:text-4xl font-medium tracking-tight text-[#ffffff] mb-4 leading-tight">CHAMADOS DO<br>ADVOGADO</h1>
+            <p class="text-[13px] text-[#ffffff]/60">Abra seu ticket de suporte ao lado</p>
         </div>
-        <button onclick="toggleTheme()" title="Alternar tema"
-            class="w-9 h-9 flex items-center justify-center rounded-xl bg-[#131313] hover:bg-[#252525] transition-colors text-slate-400 hover:text-white">
-            <svg id="iconMoonNav" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>
-            </svg>
-            <svg id="iconSunNav" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.66-9h-1M4.34 12h-1m15.07-6.07-.71.71M6.34 17.66l-.71.71M17.66 17.66l.71.71M6.34 6.34l-.71-.71M12 5a7 7 0 100 14A7 7 0 0012 5z"/>
-            </svg>
-        </button>
-    </nav>
+    </div>
 
-    <div class="h-screen overflow-hidden">
-        <div class="relative flex flex-col bg-[#131313] h-full overflow-y-auto custom-scrollbar">
-            <div class="w-full max-w-3xl mx-auto px-3 sm:px-6 md:px-12 pt-20 pb-12">
-
-                <div class="flex mb-10">
-                    <div class="inline-flex bg-[#1e1e1e] p-1 rounded-2xl w-full">
-                        <button id="btnViewAbrir" onclick="alternarTela('abrir')"
-                            class="flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all bg-white text-black">
-                            Abrir Chamado
-                        </button>
-                        <button id="btnViewConsultar" onclick="alternarTela('consultar')"
-                            class="flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white">
-                            Consultar Status
-                        </button>
-                    </div>
+    <!-- Lado Direito - Formulário -->
+    <div class="w-full lg:w-1/2 h-screen flex flex-col relative bg-[#131313] overflow-y-auto custom-scrollbar">
+        
+        <!-- Navbar (mobile e desktop) -->
+        <nav id="mobileNav" class="sticky top-0 z-40 min-h-14 py-2 px-5 flex items-center justify-between bg-[#131313] lg:bg-[#131313]/90 lg:backdrop-blur-md">
+            
+            <!-- Esquerda (Logo) -->
+            <div class="flex items-center w-12">
+                <div class="w-9 h-9 flex-shrink-0 rounded-xl overflow-hidden">
+                    <img src="logo/image.png" alt="OAB Ceará" class="w-full h-full object-cover">
                 </div>
+            </div>
+
+            <!-- Centro (Toggle) -->
+            <div class="flex-1 flex justify-center">
+                <div class="inline-flex bg-black/40 p-1 rounded-full max-w-[280px] w-full">
+                    <button id="btnViewAbrir" onclick="alternarTela('abrir')"
+                        class="flex-1 py-[7px] px-2 rounded-full text-[10px] sm:text-xs font-medium transition-all bg-white text-black whitespace-nowrap">
+                        Abrir Chamado
+                    </button>
+                    <button id="btnViewConsultar" onclick="alternarTela('consultar')"
+                        class="flex-1 py-[7px] px-2 rounded-full text-[10px] sm:text-xs font-medium transition-all text-neutral-500 hover:text-white whitespace-nowrap">
+                        Consultar Status
+                    </button>
+                </div>
+            </div>
+
+            <!-- Direita (Tema) -->
+            <div class="flex items-center justify-end w-12">
+                <button onclick="toggleTheme()" title="Alternar tema"
+                    class="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-xl bg-[#131313] hover:bg-[#252525] transition-colors text-neutral-400 hover:text-white">
+                <svg id="iconMoonNav" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>
+                </svg>
+                <svg id="iconSunNav" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.66-9h-1M4.34 12h-1m15.07-6.07-.71.71M6.34 17.66l-.71.71M17.66 17.66l.71.71M6.34 6.34l-.71-.71M12 5a7 7 0 100 14A7 7 0 0012 5z"/>
+                </svg>
+            </button>
+        </nav>
+
+        <div class="w-full max-w-2xl mx-auto px-4 sm:px-6 md:px-12 pt-4 lg:pt-2 pb-12 flex-1">
 
                 <div id="boxStatus" class="hidden items-center gap-2.5 p-4 text-xs font-semibold mb-8 rounded-lg">
                     <span id="textoStatus"></span>
                 </div>
 
                 <!-- CABEÇALHO FIXO (visível apenas em telas grandes) -->
-                <div class="hidden lg:block mb-10 text-center">
+                <div class="hidden lg:block mb-8 mt-2 text-center">
                     <h2 id="mainTitle" class="text-white text-2xl md:text-3xl font-bold tracking-tight">Novo Chamado</h2>
-                    <p id="mainSubtitle" class="text-slate-500 text-[9px] font-bold uppercase tracking-[0.3em] mt-3">
+                    <p id="mainSubtitle" class="text-neutral-500 text-[9px] font-bold uppercase tracking-[0.3em] mt-3">
                         Preencha os campos abaixo</p>
                 </div>
 
@@ -208,81 +236,98 @@
 
                                 <div class="md:col-span-2">
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Seu
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">Seu
                                         Nome *</label>
                                     <input type="text" id="nome" name="nome" required placeholder="Nome completo"
-                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all">
+                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-neutral-600 border-none transition-all">
                                 </div>
 
                                 <div>
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">CPF
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">CPF
                                         *</label>
                                     <input type="text" id="cpf" name="cpf" required placeholder="000.000.000-00"
                                         maxlength="14"
-                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all">
+                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-neutral-600 border-none transition-all">
                                 </div>
 
                                 <div>
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">E-mail
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">E-mail
                                         *</label>
                                     <input type="email" id="email" name="email" required placeholder="email@exemplo.com"
-                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all">
+                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-neutral-600 border-none transition-all">
                                 </div>
 
                                 <div>
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Telefone
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">Telefone
                                         *</label>
                                     <input type="text" id="telefone" name="telefone" required
                                         placeholder="(00) 00000-0000" maxlength="15"
-                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all">
+                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-neutral-600 border-none transition-all">
                                 </div>
 
                                 <div>
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Número
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">Número
                                         da OAB</label>
                                     <input type="text" id="numero" name="numero" placeholder="00000"
-                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all">
+                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-neutral-600 border-none transition-all">
                                 </div>
 
-                                <div class="md:col-span-2">
+                                <div class="md:col-span-2 relative">
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Assunto
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">Assunto
                                         / Categoria *</label>
-                                    <select id="assunto" name="assunto" required
-                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white border-none transition-all cursor-pointer">
-                                        <option value="" disabled selected class="text-slate-500">Carregando
-                                            categorias...</option>
-                                    </select>
+                                    <div class="relative">
+                                        <select id="assunto" name="assunto" required
+                                            class="appearance-none w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white border-none transition-all cursor-pointer">
+                                            <option value="" disabled selected class="text-neutral-500">Carregando
+                                                categorias...</option>
+                                        </select>
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-neutral-400">
+                                            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                                            </svg>
+                                        </div>
+                                    </div>
                                     <input type="hidden" id="categoria_id" name="categoria_id">
                                 </div>
 
                                 <div class="md:col-span-2">
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Anexar
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">Anexar
                                         Arquivos (Máx 4 - Total 4MB)</label>
                                     <input type="file" id="inputImagens" accept="image/*,.pdf" multiple
-                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-slate-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-bold file:bg-white file:text-black hover:file:bg-slate-200 cursor-pointer border-none">
+                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-neutral-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-bold file:bg-white file:text-black hover:file:bg-neutral-200 cursor-pointer border-none">
 
                                     <div id="previewContainer" class="flex flex-wrap gap-3 mt-3"></div>
                                 </div>
 
                                 <div class="md:col-span-2">
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Descrição
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">Descrição
                                         do Problema *</label>
                                     <textarea id="descricao" name="descricao" rows="4" required
                                         placeholder="Descreva sua solicitação com detalhes..."
-                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all resize-none"></textarea>
+                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-neutral-600 border-none transition-all resize-none"></textarea>
                                 </div>
                             </div>
 
-                            <div class="mt-10 w-full pb-10">
+                            <div class="mt-8 w-full">
+                                <label class="flex items-start gap-3 cursor-pointer">
+                                    <input type="checkbox" id="checkDeclaracao"
+                                        class="mt-0.5 w-4 h-4 accent-white flex-shrink-0">
+                                    <span class="text-[10px] text-neutral-400 leading-relaxed">
+                                        Declaro que todas as informações preenchidas acima são verdadeiras e atualizadas.
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div class="mt-4 w-full pb-10">
                                 <button type="submit" id="btnSubmit"
-                                    class="w-full bg-white text-black py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] flex items-center justify-center hover:bg-slate-200 transition-colors disabled:opacity-50 border-none shadow-none">
+                                    class="w-full bg-white text-black py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] flex items-center justify-center hover:bg-neutral-200 transition-colors disabled:opacity-50 border-none shadow-none">
                                     Enviar Chamado
                                 </button>
                             </div>
@@ -297,7 +342,7 @@
 
                                 <div class="md:col-span-2">
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Seu
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">Seu
                                         Nome *</label>
                                     <input type="text" id="nomeR" name="nome" readonly
                                         class="w-full bg-[#1e1e1e] opacity-40 cursor-not-allowed rounded-xl px-4 py-3.5 text-sm text-white border-none transition-all">
@@ -305,7 +350,7 @@
 
                                 <div>
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">CPF
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">CPF
                                         *</label>
                                     <input type="text" id="cpfR" name="cpf" readonly
                                         class="w-full bg-[#1e1e1e] opacity-40 cursor-not-allowed rounded-xl px-4 py-3.5 text-sm text-white border-none transition-all">
@@ -313,7 +358,7 @@
 
                                 <div>
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">E-mail
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">E-mail
                                         *</label>
                                     <input type="email" id="emailR" name="email" readonly
                                         class="w-full bg-[#1e1e1e] opacity-40 cursor-not-allowed rounded-xl px-4 py-3.5 text-sm text-white border-none transition-all">
@@ -321,7 +366,7 @@
 
                                 <div>
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Telefone
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">Telefone
                                         *</label>
                                     <input type="text" id="telefoneR" name="telefone" readonly
                                         class="w-full bg-[#1e1e1e] opacity-40 cursor-not-allowed rounded-xl px-4 py-3.5 text-sm text-white border-none transition-all">
@@ -329,24 +374,31 @@
 
                                 <div>
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Número
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">Número
                                         da OAB (opcional)</label>
                                     <input type="text" id="numeroR" name="numero" readonly
                                         class="w-full bg-[#1e1e1e] opacity-40 cursor-not-allowed rounded-xl px-4 py-3.5 text-sm text-white border-none transition-all">
                                 </div>
 
-                                <div class="md:col-span-2">
+                                <div class="md:col-span-2 relative">
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Assunto
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">Assunto
                                         / Categoria *</label>
-                                    <select id="assuntoR" name="assunto"
-                                        class="w-full bg-[#1e1e1e] opacity-40 pointer-events-none rounded-xl px-4 py-3.5 text-sm text-white border-none transition-all cursor-default"></select>
+                                    <div class="relative">
+                                        <select id="assuntoR" name="assunto"
+                                            class="appearance-none w-full bg-[#1e1e1e] opacity-40 pointer-events-none rounded-xl px-4 py-3.5 text-sm text-white border-none transition-all cursor-default"></select>
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-neutral-400 opacity-40">
+                                            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                                            </svg>
+                                        </div>
+                                    </div>
                                     <input type="hidden" id="categoria_idR" name="categoria_id">
                                 </div>
 
                                 <div class="md:col-span-2">
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Descrição
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">Descrição
                                         Detalhada *</label>
                                     <textarea id="descricaoR" name="descricao" readonly rows="4"
                                         class="w-full bg-[#1e1e1e] opacity-40 cursor-not-allowed rounded-xl px-4 py-3.5 text-sm text-white border-none transition-all resize-none"></textarea>
@@ -354,7 +406,7 @@
 
                                 <div class="md:col-span-2">
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">O
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">O
                                         que foi corrigido / Observação</label>
                                     <textarea name="nova_observacao" placeholder="Ex: E-mail estava errado, já corrigi."
                                         rows="2"
@@ -363,17 +415,27 @@
 
                                 <div class="md:col-span-2">
                                     <label
-                                        class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Anexar
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">Anexar
                                         Mais Arquivos (Máx 4 - Total 4MB)</label>
                                     <input type="file" id="inputImagensR" accept="image/*,.pdf" multiple
-                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-slate-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-bold file:bg-white file:text-black hover:file:bg-slate-200 cursor-pointer border-none">
+                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-neutral-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-bold file:bg-white file:text-black hover:file:bg-neutral-200 cursor-pointer border-none">
                                     <div id="previewContainerR" class="flex flex-wrap gap-3 mt-3"></div>
                                 </div>
                             </div>
 
-                            <div class="mt-10 pb-20 md:pb-4 flex flex-col md:flex-row justify-end gap-4">
+                            <div class="mt-8 w-full">
+                                <label class="flex items-start gap-3 cursor-pointer">
+                                    <input type="checkbox" id="checkDeclaracaoR"
+                                        class="mt-0.5 w-4 h-4 accent-amber-500 flex-shrink-0">
+                                    <span class="text-[10px] text-neutral-400 leading-relaxed">
+                                        Declaro que todas as informações preenchidas acima são verdadeiras e atualizadas.
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div class="mt-4 pb-20 md:pb-4 flex flex-col md:flex-row justify-end gap-4">
                                 <button type="button" onclick="alternarTela('consultar')"
-                                    class="w-full md:w-auto bg-[#1e1e1e] text-slate-500 px-12 py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] transition-all hover:text-white flex items-center justify-center">
+                                    class="w-full md:w-auto bg-[#1e1e1e] text-neutral-500 px-12 py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] transition-all hover:text-white flex items-center justify-center">
                                     Cancelar
                                 </button>
                                 <button type="submit" id="btnResolver"
@@ -387,21 +449,21 @@
                     <!-- VISTA: CONSULTAR CHAMADO -->
                     <div id="viewConsultar" class="hidden">
                         <div id="formConsulta">
-                            <div class="space-y-6">
+                            <div>
                                 <div>
                                     <label
-                                        class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-3 ml-1">Digite
+                                        class="block text-[9px] font-bold uppercase text-neutral-400 tracking-widest mb-1.5 ml-1">Digite
                                         seu CPF</label>
                                     <input type="text" id="inputBuscaUnica" placeholder="000.000.000-00"
-                                        class="w-full bg-[#1e1e1e] rounded-xl px-5 py-4 text-sm text-white placeholder-slate-600 border-none outline-none focus:bg-[#252525] transition-all shadow-inner">
+                                        class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-neutral-600 border-none transition-all">
                                     <p
-                                        class="text-[8px] text-slate-500 font-bold uppercase tracking-widest mt-3 ml-1 italic opacity-50 text-center">
+                                        class="text-[8px] text-neutral-500 font-bold uppercase tracking-widest mt-2 ml-1 italic opacity-80">
                                         Consulte o status do seu chamado pelo CPF</p>
                                 </div>
 
-                                <div class="pb-10">
+                                <div class="mt-10 w-full pb-10">
                                     <button onclick="consultarChamadoCentral()"
-                                        class="w-full bg-white text-black py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-200 transition-all shadow-xl border-none">
+                                        class="w-full bg-white text-black py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] flex items-center justify-center hover:bg-neutral-200 transition-colors border-none shadow-none">
                                         Buscar Atendimento
                                     </button>
                                 </div>
@@ -415,8 +477,6 @@
                 </div>
             </div>
         </div>
-    </div>
-    </div>
     </div>
 
     <script>
@@ -581,6 +641,13 @@
         document.getElementById('chamadoForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            const checkDeclaracao = document.getElementById('checkDeclaracao');
+            if (!checkDeclaracao.checked) {
+                mostrarStatus('Você precisa declarar que as informações são verdadeiras antes de enviar.', true);
+                checkDeclaracao.closest('label').classList.add('ring-1', 'ring-red-500', 'rounded');
+                return;
+            }
+
             const btnSubmit = document.getElementById('btnSubmit');
             const cpfValue = document.getElementById('cpf').value;
 
@@ -596,7 +663,7 @@
 
             try {
                 const arquivosB64 = await Promise.all(arquivosSelecionados.map(toBase64));
-                const response = await fetch('/api/chamados', {
+                const response = await fetch('/gerid/api/chamados', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -641,21 +708,18 @@
 
             [vAbrir, vConsultar, vResolver].forEach(v => v && v.classList.add('hidden'));
 
-            const navbarTitle = document.getElementById('navbarTitle');
             if (tela === 'abrir') {
                 if (vAbrir) vAbrir.classList.remove('hidden');
-                if (bAbrir) bAbrir.className = "flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all bg-white text-black";
-                if (bConsultar) bConsultar.className = "flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white";
+                if (bAbrir) bAbrir.className = "flex-1 py-[7px] px-2 rounded-full text-[10px] sm:text-xs font-medium transition-all bg-white text-black whitespace-nowrap";
+                if (bConsultar) bConsultar.className = "flex-1 py-[7px] px-2 rounded-full text-[10px] sm:text-xs font-medium transition-all text-neutral-500 hover:text-white whitespace-nowrap";
                 if (mainTitle) mainTitle.textContent = "Novo Chamado";
                 if (mainSubtitle) mainSubtitle.textContent = "Preencha os campos abaixo";
-                if (navbarTitle) navbarTitle.textContent = "Novo Chamado";
             } else if (tela === 'consultar') {
                 if (vConsultar) vConsultar.classList.remove('hidden');
-                if (bConsultar) bConsultar.className = "flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all bg-white text-black";
-                if (bAbrir) bAbrir.className = "flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white";
+                if (bConsultar) bConsultar.className = "flex-1 py-[7px] px-2 rounded-full text-[10px] sm:text-xs font-medium transition-all bg-white text-black whitespace-nowrap";
+                if (bAbrir) bAbrir.className = "flex-1 py-[7px] px-2 rounded-full text-[10px] sm:text-xs font-medium transition-all text-neutral-500 hover:text-white whitespace-nowrap";
                 if (mainTitle) mainTitle.textContent = "Consultar Status";
                 if (mainSubtitle) mainSubtitle.textContent = "Acompanhe seu atendimento";
-                if (navbarTitle) navbarTitle.textContent = "Consultar Status";
 
                 const formC = document.getElementById('formConsulta');
                 const resC = document.getElementById('resultadoConsultaCentral');
@@ -670,16 +734,34 @@
                 }
             } else if (tela === 'resolver') {
                 if (vResolver) vResolver.classList.remove('hidden');
-                if (bAbrir) bAbrir.className = "flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white";
-                if (bConsultar) bConsultar.className = "flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white";
+                if (bAbrir) bAbrir.className = "flex-1 py-[7px] px-2 rounded-full text-[10px] sm:text-xs font-medium transition-all text-neutral-500 hover:text-white whitespace-nowrap";
+                if (bConsultar) bConsultar.className = "flex-1 py-[7px] px-2 rounded-full text-[10px] sm:text-xs font-medium transition-all text-neutral-500 hover:text-white whitespace-nowrap";
                 if (mainTitle) mainTitle.textContent = "Resolver Pendência";
                 if (mainSubtitle) mainSubtitle.textContent = "Atualize as informações solicitadas";
-                if (navbarTitle) navbarTitle.textContent = "Resolver Pendência";
                 window.scrollTo(0, 0);
             }
         }
 
         // --- SISTEMA DE CONSULTA CENTRALIZADA ---
+        async function confirmarDados(id) {
+            const check = document.getElementById('checkConfirma_' + id);
+            if (!check || !check.checked) {
+                alert('Marque a declaração antes de confirmar.');
+                return;
+            }
+            try {
+                const res = await fetch(`/gerid/api/public/chamados/${id}/confirmar`, { method: 'PATCH' });
+                if (res.ok) {
+                    check.disabled = true;
+                    check.closest('div.bg-blue-500\\/10').innerHTML = '<p class="text-[11px] text-blue-400 font-bold text-center py-2">✓ Dados confirmados com sucesso!</p>';
+                } else {
+                    alert('Erro ao confirmar. Tente novamente.');
+                }
+            } catch(e) {
+                alert('Erro ao confirmar. Tente novamente.');
+            }
+        }
+
         function limparConsulta() {
             document.getElementById('inputBuscaUnica').value = '';
             document.getElementById('resultadoConsultaCentral').classList.add('hidden');
@@ -697,7 +779,7 @@
                 'Informação Atualizada': 'bg-sky-500/10 text-sky-500',
                 'Pendência Concluída': 'bg-sky-500/10 text-sky-500'
             };
-            return colors[status] || 'bg-slate-500/10 text-slate-500';
+            return colors[status] || 'bg-neutral-500/10 text-neutral-500';
         }
 
         function getDotColor(status) {
@@ -709,7 +791,7 @@
                 'Cancelado': 'bg-red-500',
                 'Pendência Concluída': 'bg-sky-500'
             };
-            return dots[status] || 'bg-slate-500';
+            return dots[status] || 'bg-neutral-500';
         }
 
         async function consultarChamadoCentral() {
@@ -725,12 +807,12 @@
             resultado.classList.remove('hidden');
             resultado.innerHTML = `
                 <div class="py-16 text-center animate-pulse">
-                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Buscando informações...</p>
+                    <p class="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em]">Buscando informações...</p>
                 </div>
             `;
 
             try {
-                const response = await fetch(`/api/public/chamados/${id}`);
+                const response = await fetch(`/gerid/api/public/chamados/${id}`);
                 const data = await response.json();
 
                 if (response.ok && Array.isArray(data) && data.length > 0) {
@@ -764,7 +846,7 @@
                         <span class="text-[8px] font-bold text-white/20 uppercase tracking-[0.3em] block mb-2">Solicitante</span>
                         <span class="text-[10px] font-black text-white/50 uppercase tracking-widest">${data[0].nome}</span>
                     </div>
-                    <button onclick="limparConsulta()" class="w-full bg-white text-black px-8 py-3.5 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all hover:bg-slate-200 active:scale-[0.98]">Nova Consulta</button>
+                    <button onclick="limparConsulta()" class="w-full bg-white text-black px-8 py-3.5 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all hover:bg-neutral-200 active:scale-[0.98]">Nova Consulta</button>
                 </div>
                         </div>
                     `;
@@ -813,22 +895,22 @@
 
                 return `
                     <div class="relative flex gap-6 pb-8">
-                        ${!isLast ? `<div class="absolute left-[7px] top-6 bottom-0 w-[2px] bg-slate-600/40"></div>` : ''}
+                        ${!isLast ? `<div class="absolute left-[7px] top-6 bottom-0 w-[2px] bg-neutral-600/40"></div>` : ''}
 
                         <div class="relative z-10">
-                            <div class="w-3.5 h-3.5 rounded-full ${isLast ? getDotColor(h.status) + ' shadow-[0_0_15px_rgba(255,255,255,0.1)]' : 'bg-slate-500/50'} mt-1.5 transition-all"></div>
+                            <div class="w-3.5 h-3.5 rounded-full ${isLast ? getDotColor(h.status) + ' shadow-[0_0_15px_rgba(255,255,255,0.1)]' : 'bg-neutral-500/50'} mt-1.5 transition-all"></div>
                         </div>
 
                         <div class="flex-1">
                             <div class="flex flex-col md:flex-row md:items-center justify-between gap-1 mb-1">
-                                <span class="text-[10px] font-black uppercase tracking-widest ${isLast ? 'text-white' : 'text-slate-500'}">
+                                <span class="text-[10px] font-black uppercase tracking-widest ${isLast ? 'text-white' : 'text-neutral-500'}">
                                     ${h.status}
                                 </span>
-                                <span class="text-[8px] font-bold text-slate-600 uppercase tracking-widest">
+                                <span class="text-[8px] font-bold text-neutral-600 uppercase tracking-widest">
                                     ${dateStr} às ${timeStr}
                                 </span>
                             </div>
-                            <p class="text-[11px] leading-relaxed ${isLast ? 'text-slate-300' : 'text-slate-500 italic opacity-80'}">
+                            <p class="text-[11px] leading-relaxed ${isLast ? 'text-neutral-300' : 'text-neutral-500 italic opacity-80'}">
                                 ${h.observacao || 'Processando etapa...'}
                             </p>
                         </div>
@@ -865,8 +947,8 @@
                         </div>
                         <div class="flex flex-col gap-3 w-full">
                             ${item.status === 'Pendente' ? `<button onclick="prepararResolucao('${item.id}')" class="w-full bg-amber-600/20 text-amber-500 border border-amber-600/30 py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] hover:bg-amber-600 hover:text-white transition-all flex items-center justify-center">Resolver Pendência</button>` : ''}
-                            ${window.resultadosBusca && window.resultadosBusca.length > 1 ? `<button onclick="consultarChamadoCentral()" class="w-full bg-[#1e1e1e] text-slate-300 py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] hover:bg-white/10 transition-all flex items-center justify-center">Voltar à lista</button>` : ''}
-                            <button onclick="limparConsulta()" class="w-full bg-white text-black py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] transition-all hover:bg-slate-200 active:scale-[0.98] flex items-center justify-center">Nova Consulta</button>
+                            ${window.resultadosBusca && window.resultadosBusca.length > 1 ? `<button onclick="consultarChamadoCentral()" class="w-full bg-[#1e1e1e] text-neutral-300 py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] hover:bg-white/10 transition-all flex items-center justify-center">Voltar à lista</button>` : ''}
+                            <button onclick="limparConsulta()" class="w-full bg-white text-black py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] transition-all hover:bg-neutral-200 active:scale-[0.98] flex items-center justify-center">Nova Consulta</button>
                         </div>
                     </div>
                 </div>
@@ -902,6 +984,14 @@
         // --- Lógica do Form de Resolução ---
         document.getElementById('resolverForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            const checkR = document.getElementById('checkDeclaracaoR');
+            if (!checkR.checked) {
+                mostrarStatus('Você precisa declarar que as informações são verdadeiras antes de enviar.', true);
+                checkR.closest('label').classList.add('ring-1', 'ring-red-500', 'rounded');
+                return;
+            }
+
             const id = document.getElementById('resolverId').value;
 
             if (!id || id === 'undefined') {
@@ -916,7 +1006,7 @@
             try {
                 mostrarStatus("Salvando alterações...");
                 const arquivosB64 = await Promise.all(arquivosSelecionadosR.map(toBase64));
-                const response = await fetch(`/api/public/chamados/${id}/resolver`, {
+                const response = await fetch(`/gerid/api/public/chamados/${id}/resolver`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -964,7 +1054,7 @@
             const select = document.getElementById('assunto');
             const selectR = document.getElementById('assuntoR');
             try {
-                const response = await fetch('/api/public/categorias');
+                const response = await fetch('/gerid/api/public/categorias');
                 const data = await response.json();
                 listaCategorias = Array.isArray(data) ? data : [];
 
@@ -974,7 +1064,7 @@
                     return;
                 }
 
-                const htmlOpcoes = '<option value="" disabled selected class="text-slate-500">Selecione uma opção...</option>' +
+                const htmlOpcoes = '<option value="" disabled selected class="text-neutral-500">Selecione uma opção...</option>' +
                     listaCategorias.map(cat => `<option value="${cat.nome}" data-id="${cat.id}">${cat.nome}</option>`).join('');
 
                 select.innerHTML = htmlOpcoes;

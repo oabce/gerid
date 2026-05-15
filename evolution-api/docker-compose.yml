@@ -1,0 +1,12 @@
+services:
+  evolution-api:
+    image: atendai/evolution-api:v1.8.2
+    container_name: evolution-api
+    restart: unless-stopped
+    ports:
+      - "3032:8080"
+    environment:
+      - AUTHENTICATION_API_KEY=oabce2026
+    volumes:
+      - ./instances:/evolution/instances
+      - ./store:/evolution/store

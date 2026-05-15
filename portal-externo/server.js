@@ -3,17 +3,45 @@ require('dotenv').config();
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const path = require('path');
-const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+const http = require('http');
+const mysql = require('mysql2/promise');
 
-// Supabase (service role — somente no servidor, nunca exposto)
-const supabaseAdmin = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
-);
+function enviarWhatsApp(telefone, mensagem) {
+    const numero = '55' + telefone.replace(/\D/g, '');
+    const body = JSON.stringify({ number: numero, textMessage: { text: mensagem } });
+    const url = new URL(`${process.env.WHATSAPP_URL}/message/sendText/${process.env.WHATSAPP_INSTANCE}`);
+    const options = {
+        hostname: url.hostname,
+        port: url.port,
+        path: url.pathname,
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'apikey': process.env.WHATSAPP_KEY,
+            'Content-Length': Buffer.byteLength(body)
+        }
+    };
+    const req = http.request(options, res => res.resume());
+    req.on('error', err => console.error('[WhatsApp] Falha:', err.message));
+    req.write(body);
+    req.end();
+}
+
+// Configuração MariaDB
+const pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 3306,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
 
 function parseJson(val) {
     if (!val) return [];
-    if (Array.isArray(val)) return val;
     if (typeof val === 'object') return val;
     try { return JSON.parse(val); } catch { return []; }
 }
@@ -23,8 +51,8 @@ async function gerarProtocoloUnico() {
     for (let tentativa = 0; tentativa < 5; tentativa++) {
         const random = Math.floor(1000 + Math.random() * 9000);
         const protocolo = `${ano}-${random}`;
-        const { data } = await supabaseAdmin.from('chamados').select('id').eq('protocolo', protocolo).maybeSingle();
-        if (!data) return protocolo;
+        const [rows] = await pool.query('SELECT id FROM chamados WHERE protocolo = ?', [protocolo]);
+        if (rows.length === 0) return protocolo;
     }
     throw new Error('Não foi possível gerar um protocolo único. Tente novamente.');
 }
@@ -38,22 +66,18 @@ function validarCPF(cpf) {
 }
 
 const app = express();
+const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
 app.use(cors());
 app.use(express.json({ limit: '8mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-async function uploadParaStorage(protocolo, buffer, nome, contentType) {
+function salvarArquivo(buffer, nome) {
     const ext = path.extname(nome).toLowerCase() || '.bin';
-    const nomeArq = `${protocolo}/${Date.now()}${ext}`;
-    const { error } = await supabaseAdmin.storage
-        .from('chamados')
-        .upload(nomeArq, buffer, { contentType });
-    if (error) {
-        console.error('[Storage] Erro upload:', error.message, '| arquivo:', nome, '| bucket: chamados');
-        return { erro: error.message };
-    }
-    const { data } = supabaseAdmin.storage.from('chamados').getPublicUrl(nomeArq);
-    return { url: data.publicUrl };
+    const nomeArq = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    fs.writeFileSync(path.join(UPLOADS_DIR, nomeArq), buffer);
+    return `/uploads/${nomeArq}`;
 }
 
 const transporter = nodemailer.createTransport({
@@ -74,9 +98,7 @@ app.post('/api/chamados', async (req, res) => {
         const { nome, cpf, email, telefone, assunto, descricao, numero, arquivos: arquivosB64 = [] } = req.body;
         const cpfLimpo = cpf ? cpf.replace(/\D/g, '') : null;
         const oab = numero || '---';
-        const arquivos = arquivosB64; // [{name, type, data}] em base64
-        const protocolo = await gerarProtocoloUnico();
-        const portalUrl = process.env.PUBLIC_URL || 'https://chamados-gerid.netlify.app';
+        const portalUrl = process.env.PUBLIC_URL || 'http://localhost:3003';
 
         const parteInicial = email.split('@')[0].toLowerCase();
         if (['teste', 'test', 'asdf', '123456', 'abcde'].includes(parteInicial)) {
@@ -86,14 +108,13 @@ app.post('/api/chamados', async (req, res) => {
             return res.status(400).json({ error: 'O CPF informado é inválido.' });
         }
 
-        // Upload dos arquivos para Supabase Storage
+        const protocolo = await gerarProtocoloUnico();
+
+        // Salva arquivos localmente
         const imageURLs = [];
-        const uploadErros = [];
-        for (const arq of arquivos) {
+        for (const arq of arquivosB64) {
             const buf = Buffer.from(arq.data, 'base64');
-            const resultado = await uploadParaStorage(protocolo, buf, arq.name, arq.type);
-            if (resultado.url) imageURLs.push(resultado.url);
-            else if (resultado.erro) uploadErros.push(`${arq.name}: ${resultado.erro}`);
+            imageURLs.push(salvarArquivo(buf, arq.name));
         }
 
         const historico = [{
@@ -103,16 +124,15 @@ app.post('/api/chamados', async (req, res) => {
             agente: 'Sistema'
         }];
 
-        const { error: insertError } = await supabaseAdmin.from('chamados').insert({
-            protocolo, nome, cpf: cpfLimpo, email, telefone, oab, assunto, descricao,
-            status: 'Aberto',
-            imagens: imageURLs,
-            historico,
-            criado_em: new Date().toISOString(),
-            atualizado_em: new Date().toISOString()
-        });
-        if (insertError) throw new Error(insertError.message);
+        await pool.query(
+            `INSERT INTO chamados (protocolo, nome, cpf, email, telefone, oab, assunto, descricao, status, imagens, historico, criado_em, atualizado_em)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [protocolo, nome, cpfLimpo, email, telefone, oab, assunto, descricao, 'Aberto', JSON.stringify(imageURLs), JSON.stringify(historico), new Date(), new Date()]
+        );
 
+        res.status(201).json({ message: 'Solicitação enviada com sucesso!', protocolo });
+
+        // Emails (fire-and-forget)
         const isGerid = assunto.toLowerCase().includes('gerid');
         const htmlSuporte = isGerid ? `
             <div style="font-family:sans-serif;max-width:600px;color:#333">
@@ -137,15 +157,12 @@ app.post('/api/chamados', async (req, res) => {
                 <hr><p>Protocolo: ${protocolo}</p>
             </div>`;
 
-        res.status(201).json({ message: 'Solicitação enviada com sucesso!', protocolo, ...(uploadErros.length ? { aviso_uploads: uploadErros } : {}) });
-
-        // Emails disparados após responder ao cliente (não bloqueiam nem causam 500)
         transporter.sendMail({
             from: process.env.SMTP_FROM,
             to: process.env.SMTP_TO,
             subject: `NOVO CHAMADO - PROTOCOLO #${protocolo} - ${assunto}`,
             html: htmlSuporte,
-            attachments: arquivos.map(f => ({ filename: f.name, content: Buffer.from(f.data, 'base64') }))
+            attachments: arquivosB64.map(f => ({ filename: f.name, content: Buffer.from(f.data, 'base64') }))
         }).catch(err => console.error('[E-mail] Suporte:', err.message));
 
         transporter.sendMail({
@@ -167,6 +184,10 @@ app.post('/api/chamados', async (req, res) => {
                 </div>`
         }).catch(err => console.error('[E-mail] Confirmação usuário:', err.message));
 
+        enviarWhatsApp(telefone,
+            `✅ *OAB-CE | Chamado Aberto*\n\nOlá, ${nome}!\n\nSeu chamado foi registrado com sucesso.\n\n*Protocolo:* #${protocolo}\n*Assunto:* ${assunto}\n\nAcompanhe pelo link:\n${portalUrl}?aba=consultar`
+        );
+
     } catch (error) {
         console.error('Erro ao criar chamado:', error.message);
         res.status(500).json({ error: 'Erro ao enviar sua solicitação. Tente novamente.' });
@@ -176,13 +197,8 @@ app.post('/api/chamados', async (req, res) => {
 // Listar Categorias
 app.get('/api/public/categorias', async (req, res) => {
     try {
-        const { data, error } = await supabaseAdmin
-            .from('categorias')
-            .select('*')
-            .eq('ativo', true)
-            .order('nome', { ascending: true });
-        if (error) throw new Error(error.message);
-        res.json(data || []);
+        const [rows] = await pool.query('SELECT * FROM categorias WHERE ativo = 1 ORDER BY nome ASC');
+        res.json(rows || []);
     } catch (error) {
         console.error('[Categorias] Erro:', error.message);
         res.status(500).json({ error: 'Erro ao carregar categorias' });
@@ -195,13 +211,10 @@ app.get('/api/public/chamados/:id', async (req, res) => {
         const { id } = req.params;
         const cleanCPF = id.replace(/\D/g, '');
 
-        const { data: chamados, error } = await supabaseAdmin
-            .from('chamados')
-            .select('*')
-            .or(`cpf.eq.${cleanCPF},cpf.eq.${id}`)
-            .order('criado_em', { ascending: false });
-
-        if (error) throw new Error(error.message);
+        const [chamados] = await pool.query(
+            'SELECT * FROM chamados WHERE cpf = ? OR cpf = ? ORDER BY criado_em DESC',
+            [cleanCPF, id]
+        );
 
         if (!chamados || chamados.length === 0) {
             return res.status(404).json({ error: 'Nenhum chamado encontrado para este CPF.' });
@@ -218,7 +231,6 @@ app.get('/api/public/chamados/:id', async (req, res) => {
                     agente: 'Suporte'
                 }] : [])
             ];
-
             return {
                 id: c.id, protocolo: c.protocolo, nome: c.nome,
                 cpf: c.cpf, email: c.email, telefone: c.telefone,
@@ -242,29 +254,20 @@ app.patch('/api/public/chamados/:id/resolver', async (req, res) => {
     try {
         const { id } = req.params;
         const { nome, cpf, email, telefone, assunto, descricao, nova_observacao, arquivos: arquivosB64 = [] } = req.body;
-        const arquivos = arquivosB64;
-        const portalUrl = process.env.PUBLIC_URL || 'https://chamados-gerid.netlify.app';
+        const portalUrl = process.env.PUBLIC_URL || 'http://localhost:3003';
 
-        const { data: chamado, error: findError } = await supabaseAdmin
-            .from('chamados')
-            .select('imagens, historico, protocolo')
-            .eq('id', id)
-            .single();
+        const [rows] = await pool.query('SELECT * FROM chamados WHERE id = ?', [id]);
+        const chamado = rows[0];
+        if (!chamado) return res.status(404).json({ error: 'Chamado não encontrado.' });
 
-        if (findError || !chamado) return res.status(404).json({ error: 'Chamado não encontrado.' });
+        const protocolo = chamado.protocolo;
+        const imagensAtuais = parseJson(chamado.imagens);
+        const historicoAtual = parseJson(chamado.historico);
 
-        const { protocolo, imagens, historico } = chamado;
-        const imagensAtuais = parseJson(imagens);
-        const historicoAtual = parseJson(historico);
-
-        // Upload dos novos arquivos
         const novasUrls = [];
-        const uploadErrosR = [];
-        for (const arq of arquivos) {
+        for (const arq of arquivosB64) {
             const buf = Buffer.from(arq.data, 'base64');
-            const resultado = await uploadParaStorage(protocolo, buf, arq.name, arq.type);
-            if (resultado.url) novasUrls.push(resultado.url);
-            else if (resultado.erro) uploadErrosR.push(`${arq.name}: ${resultado.erro}`);
+            novasUrls.push(salvarArquivo(buf, arq.name));
         }
 
         const novoHistorico = [...historicoAtual, {
@@ -274,17 +277,12 @@ app.patch('/api/public/chamados/:id/resolver', async (req, res) => {
             agente: 'Solicitante'
         }];
 
-        const { error: updateError } = await supabaseAdmin.from('chamados').update({
-            nome, cpf, email, telefone, assunto, descricao,
-            status: 'Pendência Concluída',
-            resposta_usuario: nova_observacao || null,
-            imagens: [...imagensAtuais, ...novasUrls],
-            historico: novoHistorico,
-            atualizado_em: new Date().toISOString()
-        }).eq('id', id);
-        if (updateError) throw new Error(updateError.message);
+        await pool.query(
+            `UPDATE chamados SET nome=?, cpf=?, email=?, telefone=?, assunto=?, descricao=?, status=?, resposta_usuario=?, imagens=?, historico=?, atualizado_em=? WHERE id=?`,
+            [nome, cpf, email, telefone, assunto, descricao, 'Pendência Concluída', nova_observacao || null, JSON.stringify([...imagensAtuais, ...novasUrls]), JSON.stringify(novoHistorico), new Date(), id]
+        );
 
-        res.json({ success: true, message: 'Pendência enviada com sucesso!', ...(uploadErrosR.length ? { aviso_uploads: uploadErrosR } : {}) });
+        res.json({ success: true, message: 'Pendência enviada com sucesso!' });
 
         transporter.sendMail({
             from: process.env.SMTP_FROM,
@@ -295,7 +293,7 @@ app.patch('/api/public/chamados/:id/resolver', async (req, res) => {
                 <p><strong>${nome}</strong> atualizou as informações do chamado.</p>
                 <p><strong>Observação:</strong> ${nova_observacao || 'Nenhuma.'}</p>
                 <p>Verifique o painel do agente.</p></div>`,
-            attachments: arquivos.map(f => ({ filename: f.name, content: Buffer.from(f.data, 'base64') }))
+            attachments: arquivosB64.map(f => ({ filename: f.name, content: Buffer.from(f.data, 'base64') }))
         }).catch(err => console.error('[E-mail] Suporte resolver:', err.message));
 
         transporter.sendMail({
@@ -312,17 +310,43 @@ app.patch('/api/public/chamados/:id/resolver', async (req, res) => {
             </div>`
         }).catch(err => console.error('[E-mail] Confirmação resolver:', err.message));
 
+        enviarWhatsApp(telefone,
+            `📋 *OAB-CE | Pendência Recebida*\n\nOlá, ${nome}!\n\nRecebemos suas informações complementares.\n\n*Protocolo:* #${protocolo}\n*Novo Status:* Pendência Concluída\n\nAcompanhe pelo link:\n${portalUrl}?aba=consultar`
+        );
+
     } catch (error) {
         console.error('Erro ao resolver pendência:', error.message);
         res.status(500).json({ error: 'Erro ao processar sua resolução.' });
     }
 });
 
-// Exporta o app para uso como Netlify Function
-// e mantém o listen para desenvolvimento local
-if (require.main === module) {
-    const PORT = process.env.PORT_PUBLICO || 3000;
-    app.listen(PORT, () => console.log(`Portal Público rodando na porta ${PORT}`));
-}
+// Confirmação de dados pelo solicitante (chamados GERID)
+app.patch('/api/public/chamados/:id/confirmar', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [rows] = await pool.query('SELECT * FROM chamados WHERE id = ?', [id]);
+        const chamado = rows[0];
+        if (!chamado) return res.status(404).json({ error: 'Chamado não encontrado.' });
 
-module.exports = app;
+        const historicoAtual = parseJson(chamado.historico);
+        const novoHistorico = [...historicoAtual, {
+            status: chamado.status,
+            observacao: 'Solicitante confirmou que os dados cadastrados são os mais atuais e verídicos.',
+            data: new Date().toISOString(),
+            agente: 'Solicitante'
+        }];
+
+        await pool.query(
+            'UPDATE chamados SET historico = ?, atualizado_em = ? WHERE id = ?',
+            [JSON.stringify(novoHistorico), new Date(), id]
+        );
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[Confirmar] Erro:', err.message);
+        res.status(500).json({ error: 'Erro ao confirmar dados.' });
+    }
+});
+
+const PORT = process.env.PORT_PUBLICO || 3003;
+app.listen(PORT, '0.0.0.0', () => console.log(`Portal Externo rodando na porta ${PORT}`));

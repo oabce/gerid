@@ -1,8 +1,8 @@
-version: '3.8'
-
 services:
   app:
-    build: .
+    build:
+      context: .
+      network: host
     container_name: portal-externo
     restart: unless-stopped
     ports:

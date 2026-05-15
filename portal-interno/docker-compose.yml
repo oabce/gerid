@@ -1,0 +1,14 @@
+services:
+  app:
+    build:
+      context: .
+      network: host
+    container_name: portal-interno
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
